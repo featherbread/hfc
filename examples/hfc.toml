@@ -1,0 +1,26 @@
+# This is an example project-level configuration, which defines settings that
+# we expect to apply to all deployments of the CloudFormation template.
+
+[project]
+name = "importbounce"
+
+# In this example, the CloudFormation stack creates TLS certificates for a
+# CloudFront deployment using AWS Certificate Manager, which requires that the
+# stack be deployed to the us-east-1 region.
+[aws]
+region = "us-east-1"
+
+[build]
+path = "./cmd/importbounce"
+
+[template]
+path = "CloudFormation.yaml"
+capabilities = ["CAPABILITY_IAM"]
+
+[[template.outputs]]
+help = "Upload your importbounce configuration to:"
+key = "ConfigS3URI"
+
+[[template.outputs]]
+help = "Point your CNAME to:"
+key = "ApiDomain"

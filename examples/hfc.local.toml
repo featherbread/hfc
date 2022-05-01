@@ -1,0 +1,16 @@
+# This is an example local configuration, which defines settings for one
+# individual's specific deployments of the CloudFormation template.
+
+[aws]
+profile = "importbounce"
+
+[repository]
+name = "importbounce"
+
+[[stacks]]
+name = "ImportBounceTest"
+parameters = { DomainName = "go-test.alexhamlin.co" }
+
+[[stacks]]
+name = "ImportBouncePersonal"
+parameters = { DomainName = "go.alexhamlin.co" }
