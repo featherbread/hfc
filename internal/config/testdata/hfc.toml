@@ -1,0 +1,16 @@
+[project]
+name = "hfc"
+
+[build]
+path = "./cmd/hfc"
+
+[repository]
+name = "hfc"
+
+[template]
+path = "CloudFormation.yaml"
+capabilities = ["CAPABILITY_IAM"]
+
+[[template.outputs]]
+help = "Access the API at the following URL:"
+key = "ApiUrl"

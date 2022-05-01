@@ -1,0 +1,14 @@
+[aws]
+region = "us-west-2"
+
+[[stacks]]
+name = "HFCStaging"
+
+[stacks.parameters]
+Environment = "staging"
+
+[[stacks]]
+name = "HFCProduction"
+
+[stacks.parameters]
+Environment = "production"
