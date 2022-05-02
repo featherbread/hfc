@@ -254,17 +254,16 @@ func (c *Cmd) run() error {
 func (c *Cmd) startParent() (parentErr chan error, err error) {
 	parentErr = make(chan error, 1)
 	if c.parent == nil {
-		parentErr <- nil
-		return
+		close(parentErr)
+		return parentErr, nil
 	}
 
 	pr, pw, err := os.Pipe()
 	if err != nil {
-		return
+		close(parentErr)
+		return parentErr, err
 	}
 
-	// Initialize the parent's state and set up the pipe before calling run(), so
-	// the parent will see that it shouldn't just redirect to os.Stdout.
 	c.parent.initCmd()
 	c.parent.cmd.Stdout = pw
 	c.cmd.Stdin = pr
@@ -272,17 +271,22 @@ func (c *Cmd) startParent() (parentErr chan error, err error) {
 	go func() {
 		// We need to clean up our references to both ends of the pipe, but only
 		// after we have started the parent process and allowed it to duplicate
-		// those references. In theory we could do this as soon as the parent
-		// starts, but instead we just leave our handles open until the parent is
-		// done, since it's easier to implement this way.
+		// those references. We especially have to close our write side, otherwise
+		// the child will never get the EOF from the read side even after the parent
+		// is done writing.
+		//
+		// In theory we could do this as soon as the parent starts (at least on
+		// Unix-like systems), but it's easier to implement things this way. If
+		// shelley is hitting open file limits or something because of this
+		// behavior, it might be time to reconsider whether shelley is the right
+		// solution.
 		defer pr.Close()
 		defer pw.Close()
-
-		// Now, we can finally start the parent.
+		defer close(parentErr)
 		parentErr <- c.parent.run()
 	}()
 
-	return
+	return parentErr, nil
 }
 
 func (c *Cmd) logDebug() {
