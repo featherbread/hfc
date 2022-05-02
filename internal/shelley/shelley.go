@@ -2,6 +2,7 @@
 package shelley
 
 import (
+	"bytes"
 	"errors"
 	"log"
 	"os"
@@ -22,10 +23,14 @@ type ExitError = *exec.ExitError
 // exited with a non-zero status. Methods on Cmd can override this default
 // behavior where appropriate.
 type Cmd struct {
-	args    []string
-	envs    []string
-	debug   bool
-	errexit bool
+	cmd *exec.Cmd
+
+	args     []string
+	envs     []string
+	debug    bool
+	errexit  bool
+	nostdout bool
+	nostderr bool
 }
 
 // Command initializes a new command that will run with the provided arguments.
@@ -52,9 +57,12 @@ func (c *Cmd) Debug() *Cmd {
 	return c
 }
 
-// ErrExit causes the current process to exit if the command fails to start or
-// exits with a non-zero status, approximating the behavior of "set -e" in a
-// shell. When ErrExit is used, Run will never return a non-nil error.
+// ErrExit causes the current process to exit if the command fails to start, or
+// if regular execution of the command exits with a non-zero status.
+//
+// ErrExit approximates the behavior of "set -e" in a shell, with many of the
+// same caveats and dangerous pitfalls. Some methods modify the typical behavior
+// of ErrExit, see the documentation of those functions for details.
 //
 // For commands exiting with a non-zero status, the current process will exit
 // with the same code as the command. For commands that fail to start, the error
@@ -65,30 +73,105 @@ func (c *Cmd) ErrExit() *Cmd {
 	return c
 }
 
+// NoStdout suppresses the command writing its stdout stream to the stdout of
+// the current process.
+func (c *Cmd) NoStdout() *Cmd {
+	c.nostdout = true
+	return c
+}
+
+// NoStderr suppresses the command writing its stderr stream to the stderr of
+// the current process.
+func (c *Cmd) NoStderr() *Cmd {
+	c.nostderr = true
+	return c
+}
+
+// NoOutput combines NoStdout and NoStderr.
+func (c *Cmd) NoOutput() *Cmd {
+	return c.NoStdout().NoStderr()
+}
+
 // Run runs the command and waits for it to complete.
 func (c *Cmd) Run() error {
-	cmd := exec.Command(c.args[0], c.args[1:]...)
-	cmd.Env = append(os.Environ(), c.envs...)
+	c.initCmd()
+	err := c.run()
+	if err != nil && c.errexit {
+		c.exitForError(err)
+	}
+	return err
+}
 
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+// Text runs the command, waits for it to complete, and returns its standard
+// output as a string with whitespace trimmed from both ends.
+func (c *Cmd) Text() (string, error) {
+	c.initCmd()
+
+	var stdout bytes.Buffer
+	c.cmd.Stdout = &stdout
+
+	err := c.run()
+	if err != nil && c.errexit {
+		c.exitForError(err)
+	}
+
+	return strings.TrimSpace(stdout.String()), err
+}
+
+// Successful runs the command, waits for it to complete, and returns whether it
+// exited with a status code of 0.
+//
+// Successful returns a non-nil error if the command failed to start, but not if
+// it finished with a non-zero status. With ErrExit enabled, Successful will
+// only exit the current process if the command failed to start.
+func (c *Cmd) Successful() (bool, error) {
+	c.initCmd()
+
+	err := c.run()
+	if err == nil {
+		return true, nil
+	}
+
+	var exitErr ExitError
+	if errors.As(err, &exitErr) {
+		return false, nil
+	}
+
+	if c.errexit {
+		c.exitForError(err)
+	}
+	return false, err
+}
+
+func (c *Cmd) initCmd() {
+	c.cmd = exec.Command(c.args[0], c.args[1:]...)
+	c.cmd.Env = append(os.Environ(), c.envs...)
+}
+
+func (c *Cmd) run() error {
+	if c.cmd.Stdin == nil {
+		c.cmd.Stdin = os.Stdin
+	}
+	if c.cmd.Stdout == nil && !c.nostdout {
+		c.cmd.Stdout = os.Stdout
+	}
+	if c.cmd.Stderr == nil && !c.nostderr {
+		c.cmd.Stderr = os.Stderr
+	}
 
 	if c.debug {
 		c.logDebug()
 	}
 
-	err := cmd.Run()
+	return c.cmd.Run()
+}
 
-	if err != nil && c.errexit {
-		var exitErr ExitError
-		if errors.As(err, &exitErr) {
-			os.Exit(exitErr.ExitCode())
-		}
-		log.Fatal(err)
+func (c *Cmd) exitForError(err error) {
+	var exitErr ExitError
+	if errors.As(err, &exitErr) {
+		os.Exit(exitErr.ExitCode())
 	}
-
-	return err
+	log.Fatal(err)
 }
 
 func (c *Cmd) logDebug() {

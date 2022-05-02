@@ -22,13 +22,7 @@ func init() {
 }
 
 func runBuild(cmd *cobra.Command, args []string) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	outputPath := rootState.Path("output", rootConfig.Project.Name)
-	outputPath, err = filepath.Rel(cwd, outputPath)
+	outputPath, err := rootState.BinaryPath(rootConfig.Project.Name)
 	if err != nil {
 		log.Fatal(err)
 	}

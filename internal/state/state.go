@@ -36,6 +36,17 @@ func Get(configPath string) (State, error) {
 	return State{path: statePath}, nil
 }
 
+// OutputPath returns the relative file path to the named Go binary in the state
+// directory.
+func (s State) BinaryPath(name string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	fullPath := s.Path("output", name)
+	return filepath.Rel(cwd, fullPath)
+}
+
 // Path returns the absolute file path formed by joining the provided path
 // elements to the state directory path.
 func (s State) Path(elem ...string) string {
