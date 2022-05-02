@@ -46,9 +46,18 @@ func Command(args ...string) *Cmd {
 // its parent.
 //
 // The new child command will start its parent when run, but will not inherit
-// any other settings from the parent (environment, Debug, ErrExit, etc.). If
-// multiple commands in a pipeline should have these settings, they must be
-// specified for each command in the pipeline.
+// other settings (e.g. environment) from the parent. If multiple commands in a
+// pipeline should have these settings, they must be specified for each command
+// in the pipeline.
+//
+// Piped commands approximate the behavior of "set -o pipefail" in a shell, with
+// many of the same caveats and pitfalls. That is, if the child does not produce
+// an error but the parent does, the child will return the parent's error.
+//
+// If ErrExit is enabled for the parent command, it will have no effect, and the
+// parent's error will simply propagate to the child as described above. If the
+// child has ErrExit enabled and the parent fails, ErrExit will take effect
+// based on the parent's exit status.
 func (c *Cmd) Pipe(args ...string) *Cmd {
 	return &Cmd{parent: c, args: args}
 }
@@ -64,6 +73,9 @@ func (c *Cmd) Env(name, value string) *Cmd {
 
 // Debug causes the full command to be printed with the log package before it is
 // run, approximating the behavior of "set -x" in a shell.
+//
+// When Debug is enabled for multiple commands in a pipeline, the commands will
+// be printed in an indeterminate order.
 func (c *Cmd) Debug() *Cmd {
 	c.debug = true
 	return c
@@ -73,8 +85,8 @@ func (c *Cmd) Debug() *Cmd {
 // if regular execution of the command exits with a non-zero status.
 //
 // ErrExit approximates the behavior of "set -e" in a shell, with many of the
-// same caveats and dangerous pitfalls. Some methods modify the typical behavior
-// of ErrExit, see the documentation of those functions for details.
+// same caveats and pitfalls. Some methods modify the typical behavior of
+// ErrExit, see the documentation of those functions for details.
 //
 // For commands exiting with a non-zero status, the current process will exit
 // with the same code as the command. For commands that fail to start, the error
@@ -171,35 +183,54 @@ func (c *Cmd) run() error {
 		c.cmd.Stderr = os.Stderr
 	}
 
-	parentErr := make(chan error, 1)
-	if c.parent != nil {
-		pr, pw, err := os.Pipe()
-		if err != nil {
-			return err
-		}
-		defer pr.Close()
-		defer pw.Close()
-
-		c.parent.initCmd()
-		c.parent.cmd.Stdout = pw
-		c.cmd.Stdin = pr
-		go func() {
-			defer pw.Close()
-			parentErr <- c.parent.run()
-		}()
-	} else {
-		parentErr <- nil
+	parentErr, err := c.startParent()
+	if err != nil {
+		return err
 	}
 
 	if c.debug {
 		c.logDebug()
 	}
 
-	err := c.cmd.Run()
-	if perr := <-parentErr; perr != nil {
+	err = c.cmd.Run()
+	if perr := <-parentErr; perr != nil && err == nil {
 		return perr
 	}
 	return err
+}
+
+func (c *Cmd) startParent() (parentErr chan error, err error) {
+	parentErr = make(chan error, 1)
+	if c.parent == nil {
+		parentErr <- nil
+		return
+	}
+
+	pr, pw, err := os.Pipe()
+	if err != nil {
+		return
+	}
+
+	// Initialize the parent's state and set up the pipe before calling run(), so
+	// the parent will see that it shouldn't just redirect to os.Stdout.
+	c.parent.initCmd()
+	c.parent.cmd.Stdout = pw
+	c.cmd.Stdin = pr
+
+	go func() {
+		// We need to clean up our references to both ends of the pipe, but only
+		// after we have started the parent process and allowed it to duplicate
+		// those references. In theory we could do this as soon as the parent
+		// starts, but instead we just leave our handles open until the parent is
+		// done, since it's easier to implement this way.
+		defer pr.Close()
+		defer pw.Close()
+
+		// Now, we can finally start the parent.
+		parentErr <- c.parent.run()
+	}()
+
+	return
 }
 
 func (c *Cmd) exitForError(err error) {
