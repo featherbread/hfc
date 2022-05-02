@@ -98,7 +98,6 @@ func (c *Context) Command(args ...string) *Cmd {
 type Cmd struct {
 	context *Context
 	cmd     *exec.Cmd
-	started chan struct{}
 
 	// TODO: "Parent" and "child" have well-established meanings in the context of
 	// process management that are not really consistent with this usage. This
@@ -169,6 +168,7 @@ func (c *Cmd) NoOutput() *Cmd {
 
 // Run runs the command and waits for it to complete.
 func (c *Cmd) Run() error {
+	c.logDebug()
 	c.initCmd()
 	return c.run()
 }
@@ -178,6 +178,7 @@ func (c *Cmd) Run() error {
 // NoStdout setting as well as the Stdout of the command's Context, and captures
 // the command's output exclusively into an in-memory buffer.
 func (c *Cmd) Text() (string, error) {
+	c.logDebug()
 	c.initCmd()
 
 	var stdout bytes.Buffer
@@ -191,6 +192,7 @@ func (c *Cmd) Text() (string, error) {
 // exited with a status code of 0. It returns a non-nil error only if the
 // command failed to start, not if it finished with a non-zero status.
 func (c *Cmd) Successful() (bool, error) {
+	c.logDebug()
 	c.initCmd()
 
 	err := c.run()
@@ -210,7 +212,6 @@ func (c *Cmd) initCmd() {
 	args := c.expandedArgs()
 	c.cmd = exec.Command(args[0], args[1:]...)
 	c.cmd.Env = append(os.Environ(), c.envs...)
-	c.started = make(chan struct{})
 }
 
 func (c *Cmd) expandedArgs() []string {
@@ -236,15 +237,7 @@ func (c *Cmd) run() error {
 		return err
 	}
 
-	c.logDebug()
-	if err := c.cmd.Start(); err != nil {
-		return err
-	}
-	// TODO: Need to think about this channel more carefully to avoid logDebug
-	// blocking forever.
-	close(c.started)
-
-	err = c.cmd.Wait()
+	err = c.cmd.Run()
 
 	if perr := <-parentErr; perr != nil && err == nil {
 		return perr
@@ -298,17 +291,14 @@ func (c *Cmd) logDebug() {
 	if c.context.DebugLogger == nil {
 		return
 	}
+	if c.parent != nil {
+		c.parent.logDebug()
+	}
 
 	var envString string
 	for _, env := range c.envs {
 		split := strings.SplitN(env, "=", 2)
 		envString += split[0] + "=" + shellquote.Join(split[1]) + " "
-	}
-
-	if c.parent != nil {
-		// Serialize debug prints so there's less confusion about the order of
-		// commands in a single pipeline.
-		<-c.parent.started
 	}
 
 	c.context.DebugLogger.Print(envString + shellquote.Join(c.args...))
