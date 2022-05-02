@@ -129,7 +129,11 @@ func Command(args ...string) *Cmd {
 // status by unwrapping the error as an ExitError and reading the contained
 // Args. This partially works around the usual limitation of "set -o pipefail".
 func (c *Cmd) Pipe(args ...string) *Cmd {
-	return &Cmd{parent: c, args: args}
+	return &Cmd{
+		context: c.context,
+		parent:  c,
+		args:    args,
+	}
 }
 
 // Env appends an environment value to the command.
