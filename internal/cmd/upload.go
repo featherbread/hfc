@@ -1,14 +1,13 @@
 package cmd
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
-	"io"
 	"io/fs"
 	"log"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -41,11 +40,6 @@ func runUpload(cmd *cobra.Command, args []string) {
 		log.Fatalf("%s is not a regular file", outputPath)
 	}
 
-	outputHash, err := fileSHA256(outputPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	repository := shelley.GetOrExit(shelley.
 		Command(
 			"aws", "ecr", "describe-repositories",
@@ -55,7 +49,8 @@ func runUpload(cmd *cobra.Command, args []string) {
 		Text())
 
 	registry := strings.SplitN(repository, "/", 2)[0]
-	image := repository + ":" + outputHash
+	tag := strconv.FormatInt(time.Now().Unix(), 10)
+	image := repository + ":" + tag
 
 	authenticated := shelley.GetOrExit(shelley.
 		Command("zeroimage", "check-auth", "--push", image).
@@ -76,19 +71,4 @@ func runUpload(cmd *cobra.Command, args []string) {
 	if err := os.WriteFile(rootState.LatestImagePath(), []byte(image), 0644); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func fileSHA256(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(hash.Sum(nil)), nil
 }
