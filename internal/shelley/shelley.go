@@ -4,6 +4,7 @@ package shelley
 import (
 	"bytes"
 	"errors"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -54,6 +55,29 @@ func GetOrExit[T any](result T, err error) T {
 	return result
 }
 
+// DefaultContext is the Context for commands created by the top level Command
+// function.
+var DefaultContext = &Context{
+	DefaultStdin:  os.Stdin,
+	DefaultStdout: os.Stdout,
+	DefaultStderr: os.Stderr,
+}
+
+// Context provides default settings that affect the execution of commands.
+type Context struct {
+	DefaultStdin  io.Reader
+	DefaultStdout io.Writer
+	DefaultStderr io.Writer
+}
+
+// Command initializes a new command that will run with the provided arguments.
+//
+// The first argument is the name of the command to be run. If it contains no
+// path separators, it will be resolved to a complete name using a PATH lookup.
+func (c *Context) Command(args ...string) *Cmd {
+	return &Cmd{context: c, args: args}
+}
+
 // Cmd is a builder for a command.
 //
 // By default, a command will inherit the environment and standard streams of
@@ -61,6 +85,7 @@ func GetOrExit[T any](result T, err error) T {
 // exited with a non-zero status. Methods on Cmd can override this default
 // behavior where appropriate.
 type Cmd struct {
+	context *Context
 	cmd     *exec.Cmd
 	started chan struct{}
 
@@ -72,12 +97,9 @@ type Cmd struct {
 	nostderr bool
 }
 
-// Command initializes a new command that will run with the provided arguments.
-//
-// The first argument is the name of the command to be run. If it contains no
-// path separators, it will be resolved to a complete name using a PATH lookup.
+// Command initializes a new command using DefaultContext.
 func Command(args ...string) *Cmd {
-	return &Cmd{args: args}
+	return DefaultContext.Command(args...)
 }
 
 // Pipe initializes a new command whose stdin will be connected to the stdout of
@@ -180,13 +202,13 @@ func (c *Cmd) initCmd() {
 
 func (c *Cmd) run() error {
 	if c.cmd.Stdin == nil {
-		c.cmd.Stdin = os.Stdin
+		c.cmd.Stdin = c.context.DefaultStdin
 	}
 	if c.cmd.Stdout == nil && !c.nostdout {
-		c.cmd.Stdout = os.Stdout
+		c.cmd.Stdout = c.context.DefaultStdout
 	}
 	if c.cmd.Stderr == nil && !c.nostderr {
-		c.cmd.Stderr = os.Stderr
+		c.cmd.Stderr = c.context.DefaultStderr
 	}
 
 	parentErr, err := c.startParent()
