@@ -26,6 +26,28 @@ func (e ExitError) Unwrap() error {
 	return e.ExitError
 }
 
+// ExitIfError exits the current process with a non-zero code if err is non-nil.
+//
+// If err is an ExitError, the process will exit silently with the same code as
+// the command that generated the error. Otherwise, the error will be logged
+// with the log package and the process will exit with code 1.
+//
+// This enables an extremely limited but easy to use form of error handling,
+// roughly analogous to "set -e" in a shell script, but without the complex
+// rules and exceptions that many "set -e" users do not actually understand.
+func ExitIfError(err error) {
+	if err == nil {
+		return
+	}
+
+	var exitErr ExitError
+	if errors.As(err, &exitErr) {
+		os.Exit(exitErr.ExitCode())
+	}
+
+	log.Fatal(err)
+}
+
 // Cmd is a builder for a command.
 //
 // By default, a command will inherit the environment and standard streams of
@@ -40,7 +62,6 @@ type Cmd struct {
 	args     []string
 	envs     []string
 	debug    bool
-	errexit  bool
 	nostdout bool
 	nostderr bool
 }
@@ -66,12 +87,7 @@ func Command(args ...string) *Cmd {
 // child will return the parent's error. Unlike "set -o pipefail", it is
 // possible to determine which command in a pipeline failed with a non-zero
 // status by unwrapping the error as an ExitError and reading the contained
-// Args. This works around the usual limitation of "set -o pipefail".
-//
-// If ErrExit is enabled for the parent command, it will have no effect, and the
-// parent's error will simply propagate to the child as described above. If the
-// child has ErrExit enabled and the parent fails, ErrExit will take effect
-// based on the parent's exit status.
+// Args. This partially works around the usual limitation of "set -o pipefail".
 func (c *Cmd) Pipe(args ...string) *Cmd {
 	return &Cmd{parent: c, args: args}
 }
@@ -89,22 +105,6 @@ func (c *Cmd) Env(name, value string) *Cmd {
 // run, approximating the behavior of "set -x" in a shell.
 func (c *Cmd) Debug() *Cmd {
 	c.debug = true
-	return c
-}
-
-// ErrExit causes the current process to exit if the command fails to start, or
-// if regular execution of the command exits with a non-zero status.
-//
-// ErrExit approximates the behavior of "set -e" in a shell, with many of the
-// same caveats and pitfalls. Some methods modify the typical behavior of
-// ErrExit, see the documentation of those functions for details.
-//
-// For commands exiting with a non-zero status, the current process will exit
-// with the same code as the command. For commands that fail to start, the error
-// will be logged with the log package and the current process will exit with
-// status 1.
-func (c *Cmd) ErrExit() *Cmd {
-	c.errexit = true
 	return c
 }
 
@@ -130,11 +130,7 @@ func (c *Cmd) NoOutput() *Cmd {
 // Run runs the command and waits for it to complete.
 func (c *Cmd) Run() error {
 	c.initCmd()
-	err := c.run()
-	if err != nil && c.errexit {
-		c.exitForError(err)
-	}
-	return err
+	return c.run()
 }
 
 // Text runs the command, waits for it to complete, and returns its standard
@@ -146,10 +142,6 @@ func (c *Cmd) Text() (string, error) {
 	c.cmd.Stdout = &stdout
 
 	err := c.run()
-	if err != nil && c.errexit {
-		c.exitForError(err)
-	}
-
 	return strings.TrimSpace(stdout.String()), err
 }
 
@@ -157,8 +149,7 @@ func (c *Cmd) Text() (string, error) {
 // exited with a status code of 0.
 //
 // Successful returns a non-nil error if the command failed to start, but not if
-// it finished with a non-zero status. With ErrExit enabled, Successful will
-// only exit the current process if the command failed to start.
+// it finished with a non-zero status.
 func (c *Cmd) Successful() (bool, error) {
 	c.initCmd()
 
@@ -172,9 +163,6 @@ func (c *Cmd) Successful() (bool, error) {
 		return false, nil
 	}
 
-	if c.errexit {
-		c.exitForError(err)
-	}
 	return false, err
 }
 
@@ -254,14 +242,6 @@ func (c *Cmd) startParent() (parentErr chan error, err error) {
 	}()
 
 	return
-}
-
-func (c *Cmd) exitForError(err error) {
-	var exitErr ExitError
-	if errors.As(err, &exitErr) {
-		os.Exit(exitErr.ExitCode())
-	}
-	log.Fatal(err)
 }
 
 func (c *Cmd) logDebug() {

@@ -35,12 +35,10 @@ func runBuild(cmd *cobra.Command, args []string) {
 		log.Fatal("creating output directory: ", err)
 	}
 
-	shelley.
+	err = shelley.
 		Command("go", "build", "-v", "-ldflags=-s -w", "-o", outputPath, rootConfig.Build.Path).
-		Env("CGO_ENABLED", "0").
-		Env("GOOS", "linux").
-		Env("GOARCH", "arm64").
+		Env("CGO_ENABLED", "0").Env("GOOS", "linux").Env("GOARCH", "arm64").
 		Debug().
-		ErrExit().
 		Run()
+	shelley.ExitIfError(err)
 }
