@@ -270,16 +270,15 @@ func (c *Cmd) startParent() (parentErr chan error, err error) {
 
 	go func() {
 		// We need to clean up our references to both ends of the pipe, but only
-		// after we have started the parent process and allowed it to duplicate
-		// those references. We especially have to close our write side, otherwise
-		// the child will never get the EOF from the read side even after the parent
-		// is done writing.
+		// after we have started the processes and allowed them to duplicate those
+		// references. We especially have to close our write side, otherwise the
+		// child will never get the EOF from the read side even after the parent is
+		// done writing.
 		//
-		// In theory we could do this as soon as the parent starts (at least on
-		// Unix-like systems), but it's easier to implement things this way. If
-		// shelley is hitting open file limits or something because of this
-		// behavior, it might be time to reconsider whether shelley is the right
-		// solution.
+		// In theory we close the appropriate side of the pipe right after each
+		// process starts, but it's easier to implement things this way. If shelley
+		// is hitting open file limits or something because of this behavior, it
+		// might be time to reconsider whether shelley is the right solution.
 		defer pr.Close()
 		defer pw.Close()
 		defer close(parentErr)
