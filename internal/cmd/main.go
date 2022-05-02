@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"go.alexhamlin.co/hfc/internal/config"
+	"go.alexhamlin.co/hfc/internal/shelley"
 	"go.alexhamlin.co/hfc/internal/state"
 )
 
@@ -27,6 +28,9 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		log.SetPrefix("[hfc] ")
 		log.SetFlags(0)
+
+		shelley.DefaultContext.Aliases["zeroimage"] = []string{
+			"go", "run", "go.alexhamlin.co/zeroimage@main"}
 
 		configPath, err := config.FindPath()
 		if err != nil {

@@ -59,7 +59,7 @@ func runUpload(cmd *cobra.Command, args []string) {
 	image := repository + ":" + outputHash
 
 	authenticated := shelley.GetOrExit(shelley.
-		Command("go", "run", "go.alexhamlin.co/zeroimage@main", "check-auth", "--push", image).
+		Command("zeroimage", "check-auth", "--push", image).
 		Debug().
 		NoOutput().
 		Successful())
@@ -68,19 +68,13 @@ func runUpload(cmd *cobra.Command, args []string) {
 		shelley.ExitIfError(shelley.
 			Command("aws", "ecr", "get-login-password").
 			Debug().
-			Pipe(
-				"go", "run", "go.alexhamlin.co/zeroimage@main",
-				"login", "--username", "AWS", "--password-stdin", registry,
-			).
+			Pipe("zeroimage", "login", "--username", "AWS", "--password-stdin", registry).
 			Debug().
 			Run())
 	}
 
 	shelley.ExitIfError(shelley.
-		Command(
-			"go", "run", "go.alexhamlin.co/zeroimage@main",
-			"build", "--platform", "linux/arm64", "--push", image, outputPath,
-		).
+		Command("zeroimage", "build", "--platform", "linux/arm64", "--push", image, outputPath).
 		Debug().
 		Run())
 

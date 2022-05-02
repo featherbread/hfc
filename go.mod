@@ -8,6 +8,7 @@ require (
 	github.com/imdario/mergo v0.3.12
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/spf13/cobra v1.4.0
+	golang.org/x/exp v0.0.0-20220428152302-39d4317da171
 )
 
 require (

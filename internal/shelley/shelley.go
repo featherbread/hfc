@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/kballard/go-shellquote"
+	"golang.org/x/exp/slices"
 )
 
 // ExitError is the type of error returned by commands that completed with a
@@ -61,13 +62,21 @@ var DefaultContext = &Context{
 	DefaultStdin:  os.Stdin,
 	DefaultStdout: os.Stdout,
 	DefaultStderr: os.Stderr,
+	Aliases:       make(map[string][]string),
 }
 
 // Context provides default settings that affect the execution of commands.
 type Context struct {
-	DefaultStdin  io.Reader
+	// DefaultStdin is the default source of stdin for commands.
+	DefaultStdin io.Reader
+	// DefaultStdout is the default destination for the stdout of commands.
 	DefaultStdout io.Writer
+	// DefaultStderr is the default destination for the stderr of commands.
 	DefaultStderr io.Writer
+	// Aliases is a mapping from alias names to expanded arguments. When a command
+	// is built whose first argument matches a defined alias, the alias will be
+	// replaced with the associated arguments before executing the command.
+	Aliases map[string][]string
 }
 
 // Command initializes a new command that will run with the provided arguments.
@@ -129,8 +138,12 @@ func (c *Cmd) Env(name, value string) *Cmd {
 	return c
 }
 
-// Debug causes the full command to be printed with the log package before it is
-// run, approximating the behavior of "set -x" in a shell.
+// Debug prints a representation of the command with the log package before
+// running it, roughly approximating the behavior of "set -x" in a shell.
+//
+// The command will be logged with any environment values explicitly set by Env,
+// followed by the exact arguments that the command was constructed with, with
+// shell quoting applied. Aliases will not be expanded.
 func (c *Cmd) Debug() *Cmd {
 	c.debug = true
 	return c
@@ -195,9 +208,17 @@ func (c *Cmd) Successful() (bool, error) {
 }
 
 func (c *Cmd) initCmd() {
-	c.cmd = exec.Command(c.args[0], c.args[1:]...)
+	args := c.expandedArgs()
+	c.cmd = exec.Command(args[0], args[1:]...)
 	c.cmd.Env = append(os.Environ(), c.envs...)
 	c.started = make(chan struct{})
+}
+
+func (c *Cmd) expandedArgs() []string {
+	if alias, ok := c.context.Aliases[c.args[0]]; ok {
+		return append(slices.Clone(alias), c.args[1:]...)
+	}
+	return c.args
 }
 
 func (c *Cmd) run() error {
