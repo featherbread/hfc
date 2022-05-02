@@ -14,7 +14,17 @@ import (
 
 // ExitError is the type of error returned by commands that completed with a
 // non-zero exit code.
-type ExitError = *exec.ExitError
+type ExitError struct {
+	*exec.ExitError
+
+	// Args holds the original arguments of the command that generated this
+	// ExitError.
+	Args []string
+}
+
+func (e ExitError) Unwrap() error {
+	return e.ExitError
+}
 
 // Cmd is a builder for a command.
 //
@@ -51,9 +61,12 @@ func Command(args ...string) *Cmd {
 // pipeline should have these settings, they must be specified for each command
 // in the pipeline.
 //
-// Piped commands approximate the behavior of "set -o pipefail" in a shell, with
-// many of the same caveats and pitfalls. That is, if the child does not produce
-// an error but the parent does, the child will return the parent's error.
+// Piped commands approximate the behavior of "set -o pipefail" in a shell.
+// That is, if the child does not produce an error but the parent does, the
+// child will return the parent's error. Unlike "set -o pipefail", it is
+// possible to determine which command in a pipeline failed with a non-zero
+// status by unwrapping the error as an ExitError and reading the contained
+// Args. This works around the usual limitation of "set -o pipefail".
 //
 // If ErrExit is enabled for the parent command, it will have no effect, and the
 // parent's error will simply propagate to the child as described above. If the
@@ -197,8 +210,14 @@ func (c *Cmd) run() error {
 	close(c.started)
 
 	err = c.cmd.Wait()
+
 	if perr := <-parentErr; perr != nil && err == nil {
 		return perr
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return ExitError{exitErr, c.args}
 	}
 	return err
 }
