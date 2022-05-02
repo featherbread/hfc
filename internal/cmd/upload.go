@@ -67,7 +67,7 @@ func runUpload(cmd *cobra.Command, args []string) {
 	if !authenticated {
 		shelley.
 			Command("aws", "ecr", "get-login-password").
-			ErrExit().
+			Debug().ErrExit().
 			Pipe(
 				"go", "run", "go.alexhamlin.co/zeroimage@main",
 				"login", "--username", "AWS", "--password-stdin", registry,

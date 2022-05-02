@@ -23,7 +23,8 @@ type ExitError = *exec.ExitError
 // exited with a non-zero status. Methods on Cmd can override this default
 // behavior where appropriate.
 type Cmd struct {
-	cmd *exec.Cmd
+	cmd     *exec.Cmd
+	started chan struct{}
 
 	parent   *Cmd
 	args     []string
@@ -73,9 +74,6 @@ func (c *Cmd) Env(name, value string) *Cmd {
 
 // Debug causes the full command to be printed with the log package before it is
 // run, approximating the behavior of "set -x" in a shell.
-//
-// When Debug is enabled for multiple commands in a pipeline, the commands will
-// be printed in an indeterminate order.
 func (c *Cmd) Debug() *Cmd {
 	c.debug = true
 	return c
@@ -170,6 +168,7 @@ func (c *Cmd) Successful() (bool, error) {
 func (c *Cmd) initCmd() {
 	c.cmd = exec.Command(c.args[0], c.args[1:]...)
 	c.cmd.Env = append(os.Environ(), c.envs...)
+	c.started = make(chan struct{})
 }
 
 func (c *Cmd) run() error {
@@ -192,7 +191,12 @@ func (c *Cmd) run() error {
 		c.logDebug()
 	}
 
-	err = c.cmd.Run()
+	if err := c.cmd.Start(); err != nil {
+		return err
+	}
+	close(c.started)
+
+	err = c.cmd.Wait()
 	if perr := <-parentErr; perr != nil && err == nil {
 		return perr
 	}
@@ -247,5 +251,10 @@ func (c *Cmd) logDebug() {
 		split := strings.SplitN(env, "=", 2)
 		envString += split[0] + "=" + shellquote.Join(split[1]) + " "
 	}
+
+	if c.parent != nil {
+		<-c.parent.started
+	}
+
 	log.Print("+ " + envString + shellquote.Join(c.args...))
 }
