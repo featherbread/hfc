@@ -41,14 +41,14 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	if stackIdx < 0 {
 		log.Fatalf("stack %s is not configured", stackName)
 	}
+	stack := rootConfig.Stacks[stackIdx]
 
 	var capabilityArgs []string
 	if len(rootConfig.Template.Capabilities) > 0 {
 		capabilityArgs = append([]string{"--capabilities"}, rootConfig.Template.Capabilities...)
 	}
 
-	var parameterOverrideArgs []string
-	stack := rootConfig.Stacks[stackIdx]
+	parameterOverrideArgs := slices.Clone(args[1:])
 	for key, value := range stack.Parameters {
 		parameterOverrideArgs = append(parameterOverrideArgs, key+"="+value)
 	}
