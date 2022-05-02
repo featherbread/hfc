@@ -36,7 +36,8 @@ func (e ExitError) Unwrap() error {
 //
 // This enables an extremely limited but easy to use form of error handling,
 // roughly analogous to "set -e" in a shell script, but without the complex
-// rules and exceptions that many "set -e" users do not actually understand.
+// rules and exceptions that many "set -e" users (particularly this author) do
+// not actually understand.
 func ExitIfError(err error) {
 	if err == nil {
 		return
@@ -50,7 +51,7 @@ func ExitIfError(err error) {
 	log.Fatal(err)
 }
 
-// GetOrExit calls ExitIfError if err is non-nil, and otherwise returns result.
+// GetOrExit returns result after checking err with ExitIfError.
 func GetOrExit[T any](result T, err error) T {
 	ExitIfError(err)
 	return result
@@ -68,18 +69,20 @@ var DefaultContext = &Context{
 
 // Context provides default settings that affect the execution of commands.
 type Context struct {
-	// Stdin is the default source of stdin for commands.
+	// Stdin is the default source for stdin.
 	Stdin io.Reader
-	// Stdout is the default destination for the stdout of commands.
+	// Stdout is the default destination for stdout.
 	Stdout io.Writer
-	// Stderr is the default destination for the stderr of commands.
+	// Stderr is the default destination for stderr.
 	Stderr io.Writer
 	// Aliases is a mapping from alias names to expanded arguments. When a command
 	// is built whose first argument matches a defined alias, the alias will be
 	// replaced with the associated arguments before executing the command.
 	Aliases map[string][]string
 	// DebugLogger logs all commands as they are executed, approximating the
-	// behavior of "set -x" in a shell.
+	// behavior of "set -x" in a shell. Debug lines include environment variables
+	// along with the exact arguments that a command was built with, with shell
+	// quoting for all values. Aliases are not expanded.
 	DebugLogger *log.Logger
 }
 
@@ -91,12 +94,7 @@ func (c *Context) Command(args ...string) *Cmd {
 	return &Cmd{context: c, args: args}
 }
 
-// Cmd is a builder for a command.
-//
-// By default, a command will inherit the environment and standard streams of
-// the current process, and will return an error to indicate whether the command
-// exited with a non-zero status. Methods on Cmd can override this default
-// behavior where appropriate.
+// Cmd represents a runnable command.
 type Cmd struct {
 	context *Context
 	cmd     *exec.Cmd
@@ -124,10 +122,11 @@ func Command(args ...string) *Cmd {
 //
 // Piped commands approximate the behavior of "set -o pipefail" in a shell.
 // That is, if the child does not produce an error but the parent does, the
-// child will return the parent's error. Unlike "set -o pipefail", it is
+// child will return the parent's error. Unlike with "set -o pipefail", it is
 // possible to determine which command in a pipeline failed with a non-zero
 // status by unwrapping the error as an ExitError and reading the contained
-// Args. This partially works around the usual limitation of "set -o pipefail".
+// Args. This partially works around the usual limitation of this setting in a
+// real shell.
 func (c *Cmd) Pipe(args ...string) *Cmd {
 	return &Cmd{
 		context: c.context,
@@ -145,15 +144,15 @@ func (c *Cmd) Env(name, value string) *Cmd {
 	return c
 }
 
-// NoStdout suppresses the command writing its stdout stream to the stdout of
-// the current process.
+// NoStdout suppresses the command writing its stdout stream to the context's
+// stderr.
 func (c *Cmd) NoStdout() *Cmd {
 	c.nostdout = true
 	return c
 }
 
-// NoStderr suppresses the command writing its stderr stream to the stderr of
-// the current process.
+// NoStderr suppresses the command writing its stderr stream to the context's
+// stderr.
 func (c *Cmd) NoStderr() *Cmd {
 	c.nostderr = true
 	return c
@@ -171,7 +170,9 @@ func (c *Cmd) Run() error {
 }
 
 // Text runs the command, waits for it to complete, and returns its standard
-// output as a string with whitespace trimmed from both ends.
+// output as a string with whitespace trimmed from both ends. This overrides the
+// NoStdout setting as well as the Stdout of the command's Context, and captures
+// the command's output exclusively into an in-memory buffer.
 func (c *Cmd) Text() (string, error) {
 	c.initCmd()
 
@@ -183,10 +184,8 @@ func (c *Cmd) Text() (string, error) {
 }
 
 // Successful runs the command, waits for it to complete, and returns whether it
-// exited with a status code of 0.
-//
-// Successful returns a non-nil error if the command failed to start, but not if
-// it finished with a non-zero status.
+// exited with a status code of 0. It returns a non-nil error only if the
+// command failed to start, not if it finished with a non-zero status.
 func (c *Cmd) Successful() (bool, error) {
 	c.initCmd()
 
@@ -298,6 +297,8 @@ func (c *Cmd) logDebug() {
 	}
 
 	if c.parent != nil {
+		// Serialize debug prints so there's less confusion about the order of
+		// commands in a single pipeline.
 		<-c.parent.started
 	}
 
