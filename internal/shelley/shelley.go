@@ -100,7 +100,11 @@ type Cmd struct {
 	cmd     *exec.Cmd
 	started chan struct{}
 
-	parent   *Cmd
+	// TODO: "Parent" and "child" have well-established meanings in the context of
+	// process management that are not really consistent with this usage. This
+	// might cause confusion at some point.
+	parent *Cmd
+
 	args     []string
 	envs     []string
 	nostdout bool
