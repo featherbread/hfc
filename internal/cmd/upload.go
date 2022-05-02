@@ -54,7 +54,6 @@ func runUpload(cmd *cobra.Command, args []string) {
 
 	authenticated := shelley.GetOrExit(shelley.
 		Command("zeroimage", "check-auth", "--push", image).
-		NoOutput().
 		Successful())
 
 	if !authenticated {
