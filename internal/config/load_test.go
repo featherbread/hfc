@@ -13,9 +13,6 @@ func TestLoad(t *testing.T) {
 		Project: ProjectConfig{
 			Name: "hfc",
 		},
-		AWS: AWSConfig{
-			Region: "us-west-2",
-		},
 		Build: BuildConfig{
 			Path: "./cmd/hfc",
 		},
@@ -25,10 +22,6 @@ func TestLoad(t *testing.T) {
 		Template: TemplateConfig{
 			Path:         "CloudFormation.yaml",
 			Capabilities: []string{"CAPABILITY_IAM"},
-			Outputs: []TemplateOutputConfig{{
-				Help: "Access the API at the following URL:",
-				Key:  "ApiUrl",
-			}},
 		},
 		Stacks: []StackConfig{{
 			Name:       "HFCStaging",
