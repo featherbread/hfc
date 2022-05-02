@@ -59,24 +59,27 @@ func GetOrExit[T any](result T, err error) T {
 // DefaultContext is the Context for commands created by the top level Command
 // function.
 var DefaultContext = &Context{
-	DefaultStdin:  os.Stdin,
-	DefaultStdout: os.Stdout,
-	DefaultStderr: os.Stderr,
-	Aliases:       make(map[string][]string),
+	Stdin:       os.Stdin,
+	Stdout:      os.Stdout,
+	Stderr:      os.Stderr,
+	Aliases:     make(map[string][]string),
+	DebugLogger: log.Default(),
 }
 
 // Context provides default settings that affect the execution of commands.
 type Context struct {
-	// DefaultStdin is the default source of stdin for commands.
-	DefaultStdin io.Reader
-	// DefaultStdout is the default destination for the stdout of commands.
-	DefaultStdout io.Writer
-	// DefaultStderr is the default destination for the stderr of commands.
-	DefaultStderr io.Writer
+	// Stdin is the default source of stdin for commands.
+	Stdin io.Reader
+	// Stdout is the default destination for the stdout of commands.
+	Stdout io.Writer
+	// Stderr is the default destination for the stderr of commands.
+	Stderr io.Writer
 	// Aliases is a mapping from alias names to expanded arguments. When a command
 	// is built whose first argument matches a defined alias, the alias will be
 	// replaced with the associated arguments before executing the command.
 	Aliases map[string][]string
+	// DebugLogger is the logger that receives debug lines written by Cmd.Debug.
+	DebugLogger *log.Logger
 }
 
 // Command initializes a new command that will run with the provided arguments.
@@ -223,13 +226,13 @@ func (c *Cmd) expandedArgs() []string {
 
 func (c *Cmd) run() error {
 	if c.cmd.Stdin == nil {
-		c.cmd.Stdin = c.context.DefaultStdin
+		c.cmd.Stdin = c.context.Stdin
 	}
 	if c.cmd.Stdout == nil && !c.nostdout {
-		c.cmd.Stdout = c.context.DefaultStdout
+		c.cmd.Stdout = c.context.Stdout
 	}
 	if c.cmd.Stderr == nil && !c.nostderr {
-		c.cmd.Stderr = c.context.DefaultStderr
+		c.cmd.Stderr = c.context.Stderr
 	}
 
 	parentErr, err := c.startParent()
@@ -304,5 +307,5 @@ func (c *Cmd) logDebug() {
 		<-c.parent.started
 	}
 
-	log.Print("+ " + envString + shellquote.Join(c.args...))
+	c.context.DebugLogger.Print("+ " + envString + shellquote.Join(c.args...))
 }
