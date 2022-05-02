@@ -1,14 +1,13 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	"go.alexhamlin.co/hfc/internal/config"
+	"go.alexhamlin.co/hfc/internal/state"
 )
 
 func Execute() {
@@ -17,20 +16,29 @@ func Execute() {
 	}
 }
 
+var (
+	rootConfig config.Config
+	rootState  state.State
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "hfc",
 	Short: "Build and deploy serverless Go apps with AWS Lambda and CloudFormation",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		log.SetPrefix("[hfc] ")
 		log.SetFlags(0)
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		config, err := config.Load()
-		if err != nil {
-			log.Fatal("unable to load config: ", err)
-		}
 
-		configJSON, _ := json.MarshalIndent(config, "", "  ")
-		fmt.Println(string(configJSON))
+		configPath, err := config.FindPath()
+		if err != nil {
+			log.Fatal(err)
+		}
+		rootConfig, err = config.Load()
+		if err != nil {
+			log.Fatal(err)
+		}
+		rootState, err = state.Get(configPath)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
