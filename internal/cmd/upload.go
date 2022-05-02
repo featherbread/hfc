@@ -52,25 +52,42 @@ func runUpload(cmd *cobra.Command, args []string) {
 			"--repository-names", rootConfig.Repository.Name,
 			"--query", "repositories[0].repositoryUri", "--output", "text",
 		).
-		Debug().
-		ErrExit().
+		Debug().ErrExit().
 		Text()
 
-	_ = strings.SplitN(repository, "/", 2)[0]
+	registry := strings.SplitN(repository, "/", 2)[0]
 	image := repository + ":" + outputHash
 
 	authenticated, _ := shelley.
 		Command("go", "run", "go.alexhamlin.co/zeroimage@main", "check-auth", "--push", image).
-		Debug().
-		ErrExit().
+		Debug().ErrExit().
 		NoOutput().
 		Successful()
 
 	if !authenticated {
-		log.Fatal("[need to authenticate]")
+		shelley.
+			Command("aws", "ecr", "get-login-password").
+			ErrExit().
+			Pipe(
+				"go", "run", "go.alexhamlin.co/zeroimage@main",
+				"login", "--username", "AWS", "--password-stdin", registry,
+			).
+			Debug().ErrExit().
+			Run()
 	}
 
-	log.Print("[ready to push]")
+	shelley.
+		Command(
+			"go", "run", "go.alexhamlin.co/zeroimage@main",
+			"build", "--platform", "linux/arm64", "--push", image, outputPath,
+		).
+		Debug().ErrExit().
+		Run()
+
+	latestImagePath := rootState.Path("latest-image")
+	if err := os.WriteFile(latestImagePath, []byte(image), 0644); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func fileSHA256(path string) (string, error) {

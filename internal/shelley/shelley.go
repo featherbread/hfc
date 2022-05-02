@@ -25,6 +25,7 @@ type ExitError = *exec.ExitError
 type Cmd struct {
 	cmd *exec.Cmd
 
+	parent   *Cmd
 	args     []string
 	envs     []string
 	debug    bool
@@ -39,6 +40,17 @@ type Cmd struct {
 // path separators, it will be resolved to a complete name using a PATH lookup.
 func Command(args ...string) *Cmd {
 	return &Cmd{args: args}
+}
+
+// Pipe initializes a new command whose stdin will be connected to the stdout of
+// its parent.
+//
+// The new child command will start its parent when run, but will not inherit
+// any other settings from the parent (environment, Debug, ErrExit, etc.). If
+// multiple commands in a pipeline should have these settings, they must be
+// specified for each command in the pipeline.
+func (c *Cmd) Pipe(args ...string) *Cmd {
+	return &Cmd{parent: c, args: args}
 }
 
 // Env appends an environment value to the command.
@@ -159,11 +171,35 @@ func (c *Cmd) run() error {
 		c.cmd.Stderr = os.Stderr
 	}
 
+	parentErr := make(chan error, 1)
+	if c.parent != nil {
+		pr, pw, err := os.Pipe()
+		if err != nil {
+			return err
+		}
+		defer pr.Close()
+		defer pw.Close()
+
+		c.parent.initCmd()
+		c.parent.cmd.Stdout = pw
+		c.cmd.Stdin = pr
+		go func() {
+			defer pw.Close()
+			parentErr <- c.parent.run()
+		}()
+	} else {
+		parentErr <- nil
+	}
+
 	if c.debug {
 		c.logDebug()
 	}
 
-	return c.cmd.Run()
+	err := c.cmd.Run()
+	if perr := <-parentErr; perr != nil {
+		return perr
+	}
+	return err
 }
 
 func (c *Cmd) exitForError(err error) {
