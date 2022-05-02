@@ -66,8 +66,8 @@ func TestTextFromPipeWithDebug(t *testing.T) {
 	}
 
 	got, err := context.
-		Command("grep", "h").Debug().
-		Pipe("sort").Env("LC_ALL", "C").Debug().
+		Command("grep", "h").
+		Pipe("sort").Env("LC_ALL", "C").
 		Text()
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +78,7 @@ func TestTextFromPipeWithDebug(t *testing.T) {
 		t.Errorf("unexpected output; got %q, want %q", got, want)
 	}
 
-	const wantDebug = "+ grep h\n+ LC_ALL=C sort\n"
+	const wantDebug = "grep h\nLC_ALL=C sort\n"
 	if debug.String() != wantDebug {
 		t.Errorf("unexpected debug; got %q, want %q", debug.String(), wantDebug)
 	}

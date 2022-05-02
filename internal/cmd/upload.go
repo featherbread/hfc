@@ -52,7 +52,6 @@ func runUpload(cmd *cobra.Command, args []string) {
 			"--repository-names", rootConfig.Repository.Name,
 			"--query", "repositories[0].repositoryUri", "--output", "text",
 		).
-		Debug().
 		Text())
 
 	registry := strings.SplitN(repository, "/", 2)[0]
@@ -60,22 +59,18 @@ func runUpload(cmd *cobra.Command, args []string) {
 
 	authenticated := shelley.GetOrExit(shelley.
 		Command("zeroimage", "check-auth", "--push", image).
-		Debug().
 		NoOutput().
 		Successful())
 
 	if !authenticated {
 		shelley.ExitIfError(shelley.
 			Command("aws", "ecr", "get-login-password").
-			Debug().
 			Pipe("zeroimage", "login", "--username", "AWS", "--password-stdin", registry).
-			Debug().
 			Run())
 	}
 
 	shelley.ExitIfError(shelley.
 		Command("zeroimage", "build", "--platform", "linux/arm64", "--push", image, outputPath).
-		Debug().
 		Run())
 
 	latestImagePath := rootState.Path("latest-image")

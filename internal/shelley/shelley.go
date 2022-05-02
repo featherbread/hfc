@@ -63,7 +63,7 @@ var DefaultContext = &Context{
 	Stdout:      os.Stdout,
 	Stderr:      os.Stderr,
 	Aliases:     make(map[string][]string),
-	DebugLogger: log.Default(),
+	DebugLogger: nil,
 }
 
 // Context provides default settings that affect the execution of commands.
@@ -78,7 +78,8 @@ type Context struct {
 	// is built whose first argument matches a defined alias, the alias will be
 	// replaced with the associated arguments before executing the command.
 	Aliases map[string][]string
-	// DebugLogger is the logger that receives debug lines written by Cmd.Debug.
+	// DebugLogger logs all commands as they are executed, approximating the
+	// behavior of "set -x" in a shell.
 	DebugLogger *log.Logger
 }
 
@@ -104,7 +105,6 @@ type Cmd struct {
 	parent   *Cmd
 	args     []string
 	envs     []string
-	debug    bool
 	nostdout bool
 	nostderr bool
 }
@@ -142,17 +142,6 @@ func (c *Cmd) Pipe(args ...string) *Cmd {
 // set by a previous Env call.
 func (c *Cmd) Env(name, value string) *Cmd {
 	c.envs = append(c.envs, name+"="+value)
-	return c
-}
-
-// Debug prints a representation of the command with the log package before
-// running it, roughly approximating the behavior of "set -x" in a shell.
-//
-// The command will be logged with any environment values explicitly set by Env,
-// followed by the exact arguments that the command was constructed with, with
-// shell quoting applied. Aliases will not be expanded.
-func (c *Cmd) Debug() *Cmd {
-	c.debug = true
 	return c
 }
 
@@ -244,10 +233,7 @@ func (c *Cmd) run() error {
 		return err
 	}
 
-	if c.debug {
-		c.logDebug()
-	}
-
+	c.logDebug()
 	if err := c.cmd.Start(); err != nil {
 		return err
 	}
@@ -301,6 +287,10 @@ func (c *Cmd) startParent() (parentErr chan error, err error) {
 }
 
 func (c *Cmd) logDebug() {
+	if c.context.DebugLogger == nil {
+		return
+	}
+
 	var envString string
 	for _, env := range c.envs {
 		split := strings.SplitN(env, "=", 2)
@@ -311,5 +301,5 @@ func (c *Cmd) logDebug() {
 		<-c.parent.started
 	}
 
-	c.context.DebugLogger.Print("+ " + envString + shellquote.Join(c.args...))
+	c.context.DebugLogger.Print(envString + shellquote.Join(c.args...))
 }
