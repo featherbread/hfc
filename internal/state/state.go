@@ -47,6 +47,12 @@ func (s State) BinaryPath(name string) (string, error) {
 	return filepath.Rel(cwd, fullPath)
 }
 
+// LatestImagePath returns the absolute path to the file containing the latest
+// image name.
+func (s State) LatestImagePath() string {
+	return s.Path("latest-image")
+}
+
 // Path returns the absolute file path formed by joining the provided path
 // elements to the state directory path.
 func (s State) Path(elem ...string) string {
