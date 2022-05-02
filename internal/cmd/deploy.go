@@ -9,16 +9,16 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
-	"go.alexhamlin.co/hfc/internal/config"
-	"go.alexhamlin.co/hfc/internal/shelley"
 	"golang.org/x/exp/slices"
+
+	"go.alexhamlin.co/hfc/internal/shelley"
 )
 
 var deployCmd = &cobra.Command{
 	Use:   "deploy [flags] stack [parameters]",
 	Short: "Deploy a CloudFormation stack using the latest uploaded binary",
-	Run:   runDeploy,
 	Args:  cobra.MinimumNArgs(1),
+	Run:   runDeploy,
 }
 
 func init() {
@@ -36,12 +36,10 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	}
 
 	stackName := args[0]
-	stackIdx := slices.IndexFunc(rootConfig.Stacks,
-		func(s config.StackConfig) bool { return s.Name == stackName })
-	if stackIdx < 0 {
+	stack, ok := rootConfig.FindStack(stackName)
+	if !ok {
 		log.Fatalf("stack %s is not configured", stackName)
 	}
-	stack := rootConfig.Stacks[stackIdx]
 
 	var capabilityArgs []string
 	if len(rootConfig.Template.Capabilities) > 0 {

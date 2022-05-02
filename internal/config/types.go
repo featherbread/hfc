@@ -1,5 +1,7 @@
 package config
 
+import "golang.org/x/exp/slices"
+
 // Config represents a full configuration.
 type Config struct {
 	Project    ProjectConfig    `toml:"project"`
@@ -7,6 +9,17 @@ type Config struct {
 	Repository RepositoryConfig `toml:"repository"`
 	Template   TemplateConfig   `toml:"template"`
 	Stacks     []StackConfig    `toml:"stacks"`
+}
+
+// FindStack searches for the stack with the given name. If no stack is defined
+// with the provided name, FindStack returns ok == false.
+func (c *Config) FindStack(name string) (stack StackConfig, ok bool) {
+	i := slices.IndexFunc(c.Stacks, func(s StackConfig) bool { return s.Name == name })
+	if i < 0 {
+		return StackConfig{}, false
+	}
+	return c.Stacks[i], true
+
 }
 
 // ProjectConfig represents the configuration for this project, which is
