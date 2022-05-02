@@ -46,28 +46,26 @@ func runUpload(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	repository, err := shelley.
+	repository := shelley.GetOrExit(shelley.
 		Command(
 			"aws", "ecr", "describe-repositories",
 			"--repository-names", rootConfig.Repository.Name,
 			"--query", "repositories[0].repositoryUri", "--output", "text",
 		).
 		Debug().
-		Text()
-	shelley.ExitIfError(err)
+		Text())
 
 	registry := strings.SplitN(repository, "/", 2)[0]
 	image := repository + ":" + outputHash
 
-	authenticated, err := shelley.
+	authenticated := shelley.GetOrExit(shelley.
 		Command("go", "run", "go.alexhamlin.co/zeroimage@main", "check-auth", "--push", image).
 		Debug().
 		NoOutput().
-		Successful()
-	shelley.ExitIfError(err)
+		Successful())
 
 	if !authenticated {
-		err := shelley.
+		shelley.ExitIfError(shelley.
 			Command("aws", "ecr", "get-login-password").
 			Debug().
 			Pipe(
@@ -75,18 +73,16 @@ func runUpload(cmd *cobra.Command, args []string) {
 				"login", "--username", "AWS", "--password-stdin", registry,
 			).
 			Debug().
-			Run()
-		shelley.ExitIfError(err)
+			Run())
 	}
 
-	err = shelley.
+	shelley.ExitIfError(shelley.
 		Command(
 			"go", "run", "go.alexhamlin.co/zeroimage@main",
 			"build", "--platform", "linux/arm64", "--push", image, outputPath,
 		).
 		Debug().
-		Run()
-	shelley.ExitIfError(err)
+		Run())
 
 	latestImagePath := rootState.Path("latest-image")
 	if err := os.WriteFile(latestImagePath, []byte(image), 0644); err != nil {

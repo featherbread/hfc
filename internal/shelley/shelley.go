@@ -48,6 +48,12 @@ func ExitIfError(err error) {
 	log.Fatal(err)
 }
 
+// GetOrExit calls ExitIfError if err is non-nil, and otherwise returns result.
+func GetOrExit[T any](result T, err error) T {
+	ExitIfError(err)
+	return result
+}
+
 // Cmd is a builder for a command.
 //
 // By default, a command will inherit the environment and standard streams of
