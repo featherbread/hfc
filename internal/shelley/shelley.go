@@ -240,6 +240,8 @@ func (c *Cmd) run() error {
 	if err := c.cmd.Start(); err != nil {
 		return err
 	}
+	// TODO: Need to think about this channel more carefully to avoid logDebug
+	// blocking forever.
 	close(c.started)
 
 	err = c.cmd.Wait()
