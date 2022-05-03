@@ -235,8 +235,8 @@ func (c *Cmd) run() error {
 
 	err = c.cmd.Run()
 
-	if perr := <-siblingErr; perr != nil && err == nil {
-		return perr
+	if serr := <-siblingErr; serr != nil && err == nil {
+		return serr
 	}
 
 	var exitErr *exec.ExitError
