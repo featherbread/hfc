@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 	// Or, maybe it's not, and I don't. This is sort of a hack to globally skip
 	// these tests if we can't assume that a reasonable baseline set of commands
 	// is available.
-	requiredCommands := []string{"sh", "cat", "true", "false", "grep", "sort"}
+	requiredCommands := []string{"sh", "cat", "true", "false", "grep", "sort", "tr"}
 	for _, cmd := range requiredCommands {
 		if _, err := exec.LookPath(cmd); err != nil {
 			return
@@ -68,17 +68,18 @@ func TestTextFromPipeWithDebug(t *testing.T) {
 	got, err := context.
 		Command("grep", "h").
 		Pipe("sort").Env("LC_ALL", "C").
+		Pipe("tr", "h", "H").
 		Text()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	const want = "eight\nthree"
+	const want = "eigHt\ntHree"
 	if got != want {
 		t.Errorf("unexpected output; got %q, want %q", got, want)
 	}
 
-	const wantDebug = "grep h\nLC_ALL=C sort\n"
+	const wantDebug = "grep h\nLC_ALL=C sort\ntr h H\n"
 	if debug.String() != wantDebug {
 		t.Errorf("unexpected debug; got %q, want %q", debug.String(), wantDebug)
 	}
