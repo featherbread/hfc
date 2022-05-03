@@ -270,7 +270,7 @@ func (c *Cmd) startSibling() (siblingErr chan error, err error) {
 		// child will never get the EOF from the read side even after the sibling is
 		// done writing.
 		//
-		// In theory we close the appropriate side of the pipe right after each
+		// In theory we can close the appropriate side of the pipe right after each
 		// process starts, but it's easier to implement things this way. If shelley
 		// is hitting open file limits or something because of this behavior, it
 		// might be time to reconsider whether shelley is the right solution.
