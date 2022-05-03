@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"go.alexhamlin.co/hfc/internal/shelley"
 	"golang.org/x/exp/slices"
+
+	"go.alexhamlin.co/hfc/internal/shelley"
 )
 
 var cleanRepositoryCmd = &cobra.Command{
@@ -66,7 +67,7 @@ func runCleanRepository(cmd *cobra.Command, args []string) {
 		case repoTags[0] < stackTags[0]:
 			deleteTags = append(deleteTags, repoTags[0])
 			repoTags = repoTags[1:]
-		case repoTags[0] > stackTags[0]:
+		case stackTags[0] < repoTags[0]:
 			log.Fatalf("stack deployed with image tag not in repository: %s", stackTags[0])
 		}
 	}
