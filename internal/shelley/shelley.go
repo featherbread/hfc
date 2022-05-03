@@ -99,11 +99,7 @@ type Cmd struct {
 	context *Context
 	cmd     *exec.Cmd
 
-	// TODO: "Parent" and "child" have well-established meanings in the context of
-	// process management that are not really consistent with this usage. This
-	// might cause confusion at some point.
-	parent *Cmd
-
+	sibling  *Cmd
 	args     []string
 	envs     []string
 	nostdout bool
@@ -116,24 +112,24 @@ func Command(args ...string) *Cmd {
 }
 
 // Pipe initializes a new command whose stdin will be connected to the stdout of
-// its parent.
+// the original command.
 //
-// The new child command will start its parent when run, but will not inherit
-// other settings (e.g. environment) from the parent. If multiple commands in a
-// pipeline should have these settings, they must be specified for each command
-// in the pipeline.
+// The new command will start its sibling when run, but will not inherit other
+// settings (e.g. environment) from it. If multiple commands in a pipeline
+// should have these settings, they must be specified for each command in the
+// pipeline.
 //
 // Piped commands approximate the behavior of "set -o pipefail" in a shell.
-// That is, if the child does not produce an error but the parent does, the
-// child will return the parent's error. Unlike with "set -o pipefail", it is
-// possible to determine which command in a pipeline failed with a non-zero
+// That is, if this command does not produce an error but its sibling does, this
+// command will take on the sibling's error. Unlike with "set -o pipefail", it
+// is possible to determine which command in a pipeline failed with a non-zero
 // status by unwrapping the error as an ExitError and reading the contained
 // Args. This partially works around the usual limitation of this setting in a
 // real shell.
 func (c *Cmd) Pipe(args ...string) *Cmd {
 	return &Cmd{
 		context: c.context,
-		parent:  c,
+		sibling: c,
 		args:    args,
 	}
 }
@@ -232,14 +228,14 @@ func (c *Cmd) run() error {
 		c.cmd.Stderr = c.context.Stderr
 	}
 
-	parentErr, err := c.startParent()
+	siblingErr, err := c.startSibling()
 	if err != nil {
 		return err
 	}
 
 	err = c.cmd.Run()
 
-	if perr := <-parentErr; perr != nil && err == nil {
+	if perr := <-siblingErr; perr != nil && err == nil {
 		return perr
 	}
 
@@ -250,28 +246,28 @@ func (c *Cmd) run() error {
 	return err
 }
 
-func (c *Cmd) startParent() (parentErr chan error, err error) {
-	parentErr = make(chan error, 1)
-	if c.parent == nil {
-		close(parentErr)
-		return parentErr, nil
+func (c *Cmd) startSibling() (siblingErr chan error, err error) {
+	siblingErr = make(chan error, 1)
+	if c.sibling == nil {
+		close(siblingErr)
+		return siblingErr, nil
 	}
 
 	pr, pw, err := os.Pipe()
 	if err != nil {
-		close(parentErr)
-		return parentErr, err
+		close(siblingErr)
+		return siblingErr, err
 	}
 
-	c.parent.initCmd()
-	c.parent.cmd.Stdout = pw
+	c.sibling.initCmd()
+	c.sibling.cmd.Stdout = pw
 	c.cmd.Stdin = pr
 
 	go func() {
 		// We need to clean up our references to both ends of the pipe, but only
 		// after we have started the processes and allowed them to duplicate those
 		// references. We especially have to close our write side, otherwise the
-		// child will never get the EOF from the read side even after the parent is
+		// child will never get the EOF from the read side even after the sibling is
 		// done writing.
 		//
 		// In theory we close the appropriate side of the pipe right after each
@@ -280,19 +276,19 @@ func (c *Cmd) startParent() (parentErr chan error, err error) {
 		// might be time to reconsider whether shelley is the right solution.
 		defer pr.Close()
 		defer pw.Close()
-		defer close(parentErr)
-		parentErr <- c.parent.run()
+		defer close(siblingErr)
+		siblingErr <- c.sibling.run()
 	}()
 
-	return parentErr, nil
+	return siblingErr, nil
 }
 
 func (c *Cmd) logDebug() {
 	if c.context.DebugLogger == nil {
 		return
 	}
-	if c.parent != nil {
-		c.parent.logDebug()
+	if c.sibling != nil {
+		c.sibling.logDebug()
 	}
 
 	var envString string
