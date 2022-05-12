@@ -27,8 +27,8 @@ func runCurrentImage(cmd *cobra.Command, args []string) {
 		log.Fatalf("stack %s is not configured", stackName)
 	}
 
-	client := cloudformation.NewFromConfig(awsConfig)
-	output, err := client.DescribeStacks(context.Background(), &cloudformation.DescribeStacksInput{
+	cfnClient := cloudformation.NewFromConfig(awsConfig)
+	output, err := cfnClient.DescribeStacks(context.Background(), &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	})
 	if err != nil {

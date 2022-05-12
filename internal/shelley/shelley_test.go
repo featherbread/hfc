@@ -85,6 +85,30 @@ func TestTextFromPipeWithDebug(t *testing.T) {
 	}
 }
 
+func TestStdinWithDebug(t *testing.T) {
+	var debug bytes.Buffer
+	context := &Context{DebugLogger: log.New(&debug, "", 0)}
+
+	got, err := context.
+		Command("sort").
+		Env("LC_ALL", "C").
+		Stdin(strings.NewReader("one\ntwo\nthree\n")).
+		Text()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const want = "one\nthree\ntwo"
+	if got != want {
+		t.Errorf("unexpected output; got %q, want %q", got, want)
+	}
+
+	const wantDebug = "LC_ALL=C sort\n"
+	if debug.String() != wantDebug {
+		t.Errorf("unexpected debug; got %q, want %q", debug.String(), wantDebug)
+	}
+}
+
 func TestEnv(t *testing.T) {
 	var stdout bytes.Buffer
 	context := &Context{Stdout: &stdout}

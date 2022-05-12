@@ -102,6 +102,7 @@ type Cmd struct {
 	sibling *Cmd
 	args    []string
 	envs    []string
+	stdin   io.Reader
 	silent  bool
 }
 
@@ -131,6 +132,13 @@ func (c *Cmd) Pipe(args ...string) *Cmd {
 		sibling: c,
 		args:    args,
 	}
+}
+
+// Stdin overrides the command's stdin to come from the provided reader, rather
+// than the context's stdin.
+func (c *Cmd) Stdin(r io.Reader) *Cmd {
+	c.stdin = r
+	return c
 }
 
 // Env appends an environment value to the command.
@@ -206,8 +214,13 @@ func (c *Cmd) expandedArgs() []string {
 
 func (c *Cmd) run() error {
 	if c.cmd.Stdin == nil {
-		c.cmd.Stdin = c.context.Stdin
+		if c.stdin != nil {
+			c.cmd.Stdin = c.stdin
+		} else {
+			c.cmd.Stdin = c.context.Stdin
+		}
 	}
+
 	if c.cmd.Stdout == nil && !c.silent {
 		c.cmd.Stdout = c.context.Stdout
 	}

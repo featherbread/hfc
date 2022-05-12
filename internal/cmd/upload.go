@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"context"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -9,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/spf13/cobra"
 
 	"go.alexhamlin.co/hfc/internal/shelley"
@@ -40,13 +44,11 @@ func runUpload(cmd *cobra.Command, args []string) {
 		log.Fatalf("%s is not a regular file", outputPath)
 	}
 
-	repository := shelley.GetOrExit(shelley.
-		Command(
-			"aws", "ecr", "describe-repositories",
-			"--repository-names", rootConfig.Repository.Name,
-			"--query", "repositories[0].repositoryUri", "--output", "text",
-		).
-		Text())
+	ecrClient := ecr.NewFromConfig(awsConfig)
+	repository, err := getRepositoryURI(ecrClient, rootConfig.Repository.Name)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	registry := strings.SplitN(repository, "/", 2)[0]
 	tag := strconv.FormatInt(time.Now().Unix(), 10)
@@ -57,9 +59,14 @@ func runUpload(cmd *cobra.Command, args []string) {
 		Successful())
 
 	if !authenticated {
+		password, err := getLoginPassword(ecrClient)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		shelley.ExitIfError(shelley.
-			Command("aws", "ecr", "get-login-password").
-			Pipe("zeroimage", "login", "--username", "AWS", "--password-stdin", registry).
+			Command("zeroimage", "login", "--username", "AWS", "--password-stdin", registry).
+			Stdin(strings.NewReader(password)).
 			Run())
 	}
 
@@ -70,4 +77,30 @@ func runUpload(cmd *cobra.Command, args []string) {
 	if err := os.WriteFile(rootState.LatestImagePath(), []byte(image), 0644); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getRepositoryURI(client *ecr.Client, name string) (string, error) {
+	output, err := client.DescribeRepositories(context.Background(), &ecr.DescribeRepositoriesInput{
+		RepositoryNames: []string{name},
+	})
+	if err != nil {
+		return "", err
+	}
+	return *output.Repositories[0].RepositoryUri, nil
+}
+
+func getLoginPassword(client *ecr.Client) (string, error) {
+	output, err := client.GetAuthorizationToken(context.Background(), nil)
+	if err != nil {
+		return "", err
+	}
+
+	rawToken := *output.AuthorizationData[0].AuthorizationToken
+	token, err := base64.StdEncoding.DecodeString(rawToken)
+	if err != nil {
+		return "", fmt.Errorf("invalid base64 data from ECR: %w", err)
+	}
+
+	password := strings.SplitN(string(token), ":", 2)[1]
+	return password, nil
 }
