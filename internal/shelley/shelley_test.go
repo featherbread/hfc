@@ -58,33 +58,6 @@ func TestExitError(t *testing.T) {
 	}
 }
 
-func TestTextFromPipeWithDebug(t *testing.T) {
-	var debug bytes.Buffer
-	context := &Context{
-		Stdin:       strings.NewReader("one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\n"),
-		DebugLogger: log.New(&debug, "", 0),
-	}
-
-	got, err := context.
-		Command("grep", "h").
-		Pipe("sort").Env("LC_ALL", "C").
-		Pipe("tr", "h", "H").
-		Text()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	const want = "eigHt\ntHree"
-	if got != want {
-		t.Errorf("unexpected output; got %q, want %q", got, want)
-	}
-
-	const wantDebug = "grep h\nLC_ALL=C sort\ntr h H\n"
-	if debug.String() != wantDebug {
-		t.Errorf("unexpected debug; got %q, want %q", debug.String(), wantDebug)
-	}
-}
-
 func TestStdinWithDebug(t *testing.T) {
 	var debug bytes.Buffer
 	context := &Context{DebugLogger: log.New(&debug, "", 0)}

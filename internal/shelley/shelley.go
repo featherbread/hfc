@@ -16,17 +16,7 @@ import (
 
 // ExitError is the type of error returned by commands that completed with a
 // non-zero exit code.
-type ExitError struct {
-	*exec.ExitError
-
-	// Args holds the original arguments of the command that generated this
-	// ExitError.
-	Args []string
-}
-
-func (e ExitError) Unwrap() error {
-	return e.ExitError
-}
+type ExitError = *exec.ExitError
 
 // ExitIfError exits the current process with a non-zero code if err is non-nil.
 //
@@ -99,39 +89,15 @@ type Cmd struct {
 	context *Context
 	cmd     *exec.Cmd
 
-	sibling *Cmd
-	args    []string
-	envs    []string
-	stdin   io.Reader
-	silent  bool
+	args   []string
+	envs   []string
+	stdin  io.Reader
+	silent bool
 }
 
 // Command initializes a new command using DefaultContext.
 func Command(args ...string) *Cmd {
 	return DefaultContext.Command(args...)
-}
-
-// Pipe initializes a new command whose stdin will be connected to the stdout of
-// the original command.
-//
-// The new command will start its sibling when run, but will not inherit other
-// settings (e.g. environment) from it. If multiple commands in a pipeline
-// should have these settings, they must be specified for each command in the
-// pipeline.
-//
-// Piped commands approximate the behavior of "set -o pipefail" in a shell.
-// That is, if this command does not produce an error but its sibling does, this
-// command will take on the sibling's error. Unlike with "set -o pipefail", it
-// is possible to determine which command in a pipeline failed with a non-zero
-// status by unwrapping the error as an ExitError and reading the contained
-// Args. This partially works around the usual limitation of this setting in a
-// real shell.
-func (c *Cmd) Pipe(args ...string) *Cmd {
-	return &Cmd{
-		context: c.context,
-		sibling: c,
-		args:    args,
-	}
 }
 
 // Stdin overrides the command's stdin to come from the provided reader, rather
@@ -213,82 +179,25 @@ func (c *Cmd) expandedArgs() []string {
 }
 
 func (c *Cmd) run() error {
-	if c.cmd.Stdin == nil {
-		if c.stdin != nil {
-			c.cmd.Stdin = c.stdin
-		} else {
-			c.cmd.Stdin = c.context.Stdin
-		}
+	if c.stdin != nil {
+		c.cmd.Stdin = c.stdin
+	} else {
+		c.cmd.Stdin = c.context.Stdin
 	}
 
-	if c.cmd.Stdout == nil && !c.silent {
-		c.cmd.Stdout = c.context.Stdout
-	}
-	if c.cmd.Stderr == nil && !c.silent {
+	if !c.silent {
+		if c.cmd.Stdout == nil {
+			c.cmd.Stdout = c.context.Stdout
+		}
 		c.cmd.Stderr = c.context.Stderr
 	}
 
-	siblingErr, err := c.startSibling()
-	if err != nil {
-		return err
-	}
-
-	err = c.cmd.Run()
-
-	if serr := <-siblingErr; serr != nil && err == nil {
-		return serr
-	}
-
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		return ExitError{exitErr, c.args}
-	}
-	return err
-}
-
-func (c *Cmd) startSibling() (siblingErr chan error, err error) {
-	siblingErr = make(chan error, 1)
-	if c.sibling == nil {
-		close(siblingErr)
-		return siblingErr, nil
-	}
-
-	pr, pw, err := os.Pipe()
-	if err != nil {
-		close(siblingErr)
-		return siblingErr, err
-	}
-
-	c.sibling.initCmd()
-	c.sibling.cmd.Stdout = pw
-	c.cmd.Stdin = pr
-
-	go func() {
-		// We need to clean up our references to both ends of the pipe, but only
-		// after we have started the processes and allowed them to duplicate those
-		// references. We especially have to close our write side, otherwise we will
-		// never get the EOF from the read side even after the sibling is done
-		// writing.
-		//
-		// In theory we can close the appropriate side of the pipe right after each
-		// process starts, but it's easier to implement things this way. If shelley
-		// is hitting open file limits or something because of this behavior, it
-		// might be time to reconsider whether shelley is the right solution.
-		defer pr.Close()
-		defer pw.Close()
-		defer close(siblingErr)
-		siblingErr <- c.sibling.run()
-	}()
-
-	return siblingErr, nil
+	return c.cmd.Run()
 }
 
 func (c *Cmd) logDebug() {
 	if c.context.DebugLogger == nil {
 		return
-	}
-	if c.sibling != nil {
-		c.sibling.logDebug()
 	}
 
 	var envString string
