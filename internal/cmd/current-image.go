@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"context"
+	"fmt"
 	"log"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/spf13/cobra"
-
-	"go.alexhamlin.co/hfc/internal/shelley"
 )
 
 var currentImageCmd = &cobra.Command{
@@ -25,12 +27,20 @@ func runCurrentImage(cmd *cobra.Command, args []string) {
 		log.Fatalf("stack %s is not configured", stackName)
 	}
 
-	shelley.ExitIfError(shelley.
-		Command(
-			"aws", "cloudformation", "describe-stacks",
-			"--stack-name", stackName,
-			"--query", "Stacks[0].Parameters[?ParameterKey=='ImageUri'].ParameterValue",
-			"--output", "text",
-		).
-		Run())
+	client := cloudformation.NewFromConfig(awsConfig)
+	output, err := client.DescribeStacks(context.Background(), &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackName),
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, p := range output.Stacks[0].Parameters {
+		if *p.ParameterKey == "ImageUri" {
+			fmt.Println(*p.ParameterValue)
+			return
+		}
+	}
+
+	log.Fatalf("stack %s deployed without an ImageUri parameter", stackName)
 }

@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"log"
 	"os"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
 
 	"go.alexhamlin.co/hfc/internal/config"
@@ -20,6 +23,7 @@ func Execute() {
 var (
 	rootConfig config.Config
 	rootState  state.State
+	awsConfig  aws.Config
 )
 
 var rootCmd = &cobra.Command{
@@ -42,6 +46,11 @@ var rootCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 		rootState, err = state.Get(configPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		awsConfig, err = awsconfig.LoadDefaultConfig(context.Background())
 		if err != nil {
 			log.Fatal(err)
 		}
