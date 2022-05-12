@@ -1,13 +1,15 @@
 package cmd
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"io/fs"
 	"log"
 	"os"
 	"sort"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 
@@ -65,31 +67,17 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	)
 	shelley.ExitIfError(shelley.Command(deployArgs...).Run())
 
-	description, err := shelley.
-		Command("aws", "cloudformation", "describe-stacks", "--stack-name", stackName).
-		Silent().
-		Text()
+	cfnClient := cloudformation.NewFromConfig(awsConfig)
+	description, err := cfnClient.DescribeStacks(context.Background(), &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackName),
+	})
 	if err != nil {
 		log.Print("unable to read stack info, will skip printing output")
 		return
 	}
 
-	var stackInfo struct {
-		Stacks []struct {
-			Outputs []struct {
-				OutputKey   string
-				OutputValue string
-				Description string
-			}
-		}
-	}
-	if err := json.Unmarshal([]byte(description), &stackInfo); err != nil || len(stackInfo.Stacks) < 1 {
-		log.Print("unable to read stack info, will skip printing output")
-		return
-	}
-
-	for _, output := range stackInfo.Stacks[0].Outputs {
-		log.Printf("%s (%s):\n\t%s", output.Description, output.OutputKey, output.OutputValue)
+	for _, output := range description.Stacks[0].Outputs {
+		log.Printf("%s (%s):\n\t%s", *output.Description, *output.OutputKey, *output.OutputValue)
 	}
 }
 
