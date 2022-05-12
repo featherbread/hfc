@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"runtime/debug"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -27,8 +28,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "hfc",
-	Short: "Build and deploy serverless Go apps with AWS Lambda and CloudFormation",
+	Use:     "hfc",
+	Short:   "Build and deploy serverless Go apps with AWS Lambda and CloudFormation",
+	Version: getMainVersion(),
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		log.SetPrefix("[hfc] ")
 		log.SetFlags(0)
@@ -55,4 +57,15 @@ var rootCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 	},
+}
+
+func getMainVersion() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		v := info.Main.Version
+		if v != "(devel)" {
+			return v
+		}
+	}
+
+	return "v0.0.0-unknown"
 }
