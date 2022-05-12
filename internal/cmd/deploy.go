@@ -67,7 +67,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 
 	description, err := shelley.
 		Command("aws", "cloudformation", "describe-stacks", "--stack-name", stackName).
-		NoStderr().
+		Silent().
 		Text()
 	if err != nil {
 		log.Print("unable to read stack info, will skip printing output")

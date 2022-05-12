@@ -100,11 +100,11 @@ func TestEnv(t *testing.T) {
 	}
 }
 
-func TestNoOutput(t *testing.T) {
+func TestSilent(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	context := &Context{Stdout: &stdout, Stderr: &stderr}
 
-	err := context.Command("sh", "-c", "echo hello; echo world 1>&2").NoOutput().Run()
+	err := context.Command("sh", "-c", "echo hello; echo world 1>&2").Silent().Run()
 	if err != nil {
 		t.Fatal(err)
 	}

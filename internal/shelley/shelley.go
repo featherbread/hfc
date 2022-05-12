@@ -99,11 +99,10 @@ type Cmd struct {
 	context *Context
 	cmd     *exec.Cmd
 
-	sibling  *Cmd
-	args     []string
-	envs     []string
-	nostdout bool
-	nostderr bool
+	sibling *Cmd
+	args    []string
+	envs    []string
+	silent  bool
 }
 
 // Command initializes a new command using DefaultContext.
@@ -143,23 +142,11 @@ func (c *Cmd) Env(name, value string) *Cmd {
 	return c
 }
 
-// NoStdout suppresses the command writing its stdout stream to the context's
-// stderr.
-func (c *Cmd) NoStdout() *Cmd {
-	c.nostdout = true
+// Silent suppresses default forwarding of the command's standard streams to the
+// context's stdout and stderr writers.
+func (c *Cmd) Silent() *Cmd {
+	c.silent = true
 	return c
-}
-
-// NoStderr suppresses the command writing its stderr stream to the context's
-// stderr.
-func (c *Cmd) NoStderr() *Cmd {
-	c.nostderr = true
-	return c
-}
-
-// NoOutput combines NoStdout and NoStderr.
-func (c *Cmd) NoOutput() *Cmd {
-	return c.NoStdout().NoStderr()
 }
 
 // Run runs the command and waits for it to complete.
@@ -221,10 +208,10 @@ func (c *Cmd) run() error {
 	if c.cmd.Stdin == nil {
 		c.cmd.Stdin = c.context.Stdin
 	}
-	if c.cmd.Stdout == nil && !c.nostdout {
+	if c.cmd.Stdout == nil && !c.silent {
 		c.cmd.Stdout = c.context.Stdout
 	}
-	if c.cmd.Stderr == nil && !c.nostderr {
+	if c.cmd.Stderr == nil && !c.silent {
 		c.cmd.Stderr = c.context.Stderr
 	}
 
@@ -266,9 +253,9 @@ func (c *Cmd) startSibling() (siblingErr chan error, err error) {
 	go func() {
 		// We need to clean up our references to both ends of the pipe, but only
 		// after we have started the processes and allowed them to duplicate those
-		// references. We especially have to close our write side, otherwise the
-		// child will never get the EOF from the read side even after the sibling is
-		// done writing.
+		// references. We especially have to close our write side, otherwise we will
+		// never get the EOF from the read side even after the sibling is done
+		// writing.
 		//
 		// In theory we can close the appropriate side of the pipe right after each
 		// process starts, but it's easier to implement things this way. If shelley
