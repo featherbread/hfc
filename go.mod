@@ -13,6 +13,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/spf13/cobra v1.4.0
 	golang.org/x/exp v0.0.0-20220428152302-39d4317da171
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
 
 require (

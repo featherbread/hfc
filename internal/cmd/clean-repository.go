@@ -1,16 +1,20 @@
 package cmd
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
+	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
-
-	"go.alexhamlin.co/hfc/internal/shelley"
+	"golang.org/x/sync/errgroup"
 )
 
 var cleanRepositoryCmd = &cobra.Command{
@@ -24,30 +28,21 @@ func init() {
 }
 
 func runCleanRepository(cmd *cobra.Command, args []string) {
-	repoTagsJSON := shelley.GetOrExit(shelley.
-		Command(
-			"aws", "ecr", "describe-images",
-			"--repository-name", rootConfig.Repository.Name,
-			"--query", "imageDetails[].imageTags[]",
-		).
-		Text())
+	cfnClient := cloudformation.NewFromConfig(awsConfig)
+	ecrClient := ecr.NewFromConfig(awsConfig)
+	group, ctx := errgroup.WithContext(context.Background())
+
 	var repoTags []string
-	if err := json.Unmarshal([]byte(repoTagsJSON), &repoTags); err != nil {
-		log.Fatalf("tags list is not valid JSON:\n%s", repoTagsJSON)
-	}
+	group.Go(goGetRepoTags(ctx, ecrClient, &repoTags))
 
 	stackTags := make([]string, len(rootConfig.Stacks))
 	for i, stack := range rootConfig.Stacks {
-		image := shelley.GetOrExit(shelley.
-			Command(
-				"aws", "cloudformation", "describe-stacks",
-				"--stack-name", stack.Name,
-				"--query", "Stacks[0].Parameters[?ParameterKey=='ImageUri'].ParameterValue",
-				"--output", "text",
-			).
-			Text())
-		parts := strings.Split(image, ":")
-		stackTags[i] = parts[len(parts)-1]
+		// TODO: Limit concurrent stack reads?
+		group.Go(goGetStackTag(ctx, cfnClient, stack.Name, &stackTags[i]))
+	}
+
+	if err := group.Wait(); err != nil {
+		log.Fatal(err)
 	}
 
 	sort.Strings(repoTags)
@@ -83,13 +78,71 @@ func runCleanRepository(cmd *cobra.Command, args []string) {
 	fmt.Fprint(log.Writer(), log.Prefix()+"Press Enter to continue...")
 	fmt.Scanln()
 
-	deleteArgs := []string{
-		"aws", "ecr", "batch-delete-image",
-		"--repository-name", rootConfig.Repository.Name,
-		"--image-ids",
+	ids := make([]types.ImageIdentifier, len(deleteTags))
+	for i, tag := range deleteTags {
+		ids[i] = types.ImageIdentifier{ImageTag: aws.String(tag)}
 	}
-	for _, tag := range deleteTags {
-		deleteArgs = append(deleteArgs, "imageTag="+tag)
+	output, err := ecrClient.BatchDeleteImage(context.Background(), &ecr.BatchDeleteImageInput{
+		RepositoryName: aws.String(rootConfig.Repository.Name),
+		ImageIds:       ids,
+	})
+	if err != nil {
+		log.Fatal(err)
 	}
-	shelley.ExitIfError(shelley.Command(deleteArgs...).Run())
+
+	for _, id := range output.ImageIds {
+		log.Printf("Successfully deleted tag %s.", *id.ImageTag)
+	}
+	if len(output.Failures) == 0 {
+		return
+	}
+
+	for _, failure := range output.Failures {
+		msg := "failed to delete tag"
+		if failure.ImageId != nil && failure.ImageId.ImageTag != nil {
+			msg = msg + " " + *failure.ImageId.ImageTag
+		}
+		if failure.FailureReason != nil {
+			msg = msg + ": " + *failure.FailureReason
+		}
+		log.Print(msg)
+	}
+	os.Exit(1)
+}
+
+func goGetRepoTags(ctx context.Context, client *ecr.Client, repoTags *[]string) func() error {
+	return func() error {
+		images, err := client.DescribeImages(ctx, &ecr.DescribeImagesInput{
+			RepositoryName: aws.String(rootConfig.Repository.Name),
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, image := range images.ImageDetails {
+			*repoTags = append(*repoTags, image.ImageTags...)
+		}
+		return nil
+	}
+}
+
+func goGetStackTag(ctx context.Context, client *cloudformation.Client, stackName string, tag *string) func() error {
+	return func() error {
+		stack, err := client.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
+			StackName: aws.String(stackName),
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, p := range stack.Stacks[0].Parameters {
+			if *p.ParameterKey == "ImageUri" {
+				parts := strings.Split(*p.ParameterValue, ":")
+				*tag = parts[len(parts)-1]
+				return nil
+			}
+		}
+
+		return fmt.Errorf("stack %s deployed without ImageUri parameter", stackName)
+	}
 }
