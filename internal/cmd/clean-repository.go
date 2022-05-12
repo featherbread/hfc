@@ -30,6 +30,7 @@ func init() {
 func runCleanRepository(cmd *cobra.Command, args []string) {
 	cfnClient := cloudformation.NewFromConfig(awsConfig)
 	ecrClient := ecr.NewFromConfig(awsConfig)
+
 	group, ctx := errgroup.WithContext(context.Background())
 
 	var repoTags []string
@@ -73,6 +74,13 @@ func runCleanRepository(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// BatchDeleteImage supports up to 100 IDs at a time.
+	// https://docs.aws.amazon.com/AmazonECR/latest/APIReference/API_BatchDeleteImage.html#ECR-BatchDeleteImage-request-imageIds
+	if len(deleteTags) > 100 {
+		log.Print("Repository has more than 100 unused tags. Will only delete the first 100.")
+		deleteTags = deleteTags[:100]
+	}
+
 	log.Printf("Tags to keep:   %v", keepTags)
 	log.Printf("Tags to delete: %v", deleteTags)
 	fmt.Fprint(log.Writer(), log.Prefix()+"Press Enter to continue...")
@@ -91,7 +99,7 @@ func runCleanRepository(cmd *cobra.Command, args []string) {
 	}
 
 	for _, id := range output.ImageIds {
-		log.Printf("Successfully deleted tag %s.", *id.ImageTag)
+		log.Printf("Deleted tag %s.", *id.ImageTag)
 	}
 	if len(output.Failures) == 0 {
 		return
