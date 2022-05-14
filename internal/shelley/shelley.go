@@ -2,7 +2,6 @@
 package shelley
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"log"
@@ -128,21 +127,6 @@ func (c *Cmd) Run() error {
 	c.logDebug()
 	c.initCmd()
 	return c.run()
-}
-
-// Text runs the command, waits for it to complete, and returns its standard
-// output as a string with whitespace trimmed from both ends. This overrides the
-// NoStdout setting as well as the Stdout of the command's Context, and captures
-// the command's output exclusively into an in-memory buffer.
-func (c *Cmd) Text() (string, error) {
-	c.logDebug()
-	c.initCmd()
-
-	var stdout bytes.Buffer
-	c.cmd.Stdout = &stdout
-
-	err := c.run()
-	return strings.TrimSpace(stdout.String()), err
 }
 
 // Successful runs the command, waits for it to complete, and returns whether it

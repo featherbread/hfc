@@ -59,21 +59,24 @@ func TestExitError(t *testing.T) {
 }
 
 func TestStdinWithDebug(t *testing.T) {
-	var debug bytes.Buffer
-	context := &Context{DebugLogger: log.New(&debug, "", 0)}
+	var stdout, debug bytes.Buffer
+	context := &Context{
+		Stdout:      &stdout,
+		DebugLogger: log.New(&debug, "", 0),
+	}
 
-	got, err := context.
+	err := context.
 		Command("sort").
 		Env("LC_ALL", "C").
 		Stdin(strings.NewReader("one\ntwo\nthree\n")).
-		Text()
+		Run()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	const want = "one\nthree\ntwo"
-	if got != want {
-		t.Errorf("unexpected output; got %q, want %q", got, want)
+	const wantStdout = "one\nthree\ntwo\n"
+	if stdout.String() != wantStdout {
+		t.Errorf("unexpected output; got %q, want %q", stdout.String(), wantStdout)
 	}
 
 	const wantDebug = "LC_ALL=C sort\n"
@@ -86,14 +89,14 @@ func TestEnv(t *testing.T) {
 	var stdout bytes.Buffer
 	context := &Context{Stdout: &stdout}
 
-	got, err := context.Command("sh", "-c", `echo "$SHELLEY"`).Env("SHELLEY", "shelley").Text()
+	err := context.Command("sh", "-c", `echo "$SHELLEY"`).Env("SHELLEY", "shelley").Run()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	const want = "shelley"
-	if got != want {
-		t.Errorf("unexpected output; got %q, want %q", got, want)
+	const wantStdout = "shelley\n"
+	if stdout.String() != wantStdout {
+		t.Errorf("unexpected output; got %q, want %q", stdout.String(), wantStdout)
 	}
 }
 
