@@ -100,23 +100,6 @@ func TestEnv(t *testing.T) {
 	}
 }
 
-func TestSilent(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	context := &Context{Stdout: &stdout, Stderr: &stderr}
-
-	err := context.Command("sh", "-c", "echo hello; echo world 1>&2").Silent().Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if stdout.Len() > 0 {
-		t.Errorf("stdout not suppressed: %q", stdout.String())
-	}
-	if stderr.Len() > 0 {
-		t.Errorf("stderr not suppressed: %q", stderr.String())
-	}
-}
-
 func TestTestTrue(t *testing.T) {
 	got, err := Command("true").Test()
 	if err != nil {

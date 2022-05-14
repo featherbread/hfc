@@ -82,10 +82,9 @@ type Cmd struct {
 	context *Context
 	cmd     *exec.Cmd
 
-	args   []string
-	envs   []string
-	stdin  io.Reader
-	silent bool
+	args  []string
+	envs  []string
+	stdin io.Reader
 }
 
 // Command initializes a new command using DefaultContext.
@@ -109,13 +108,6 @@ func (c *Cmd) Env(name, value string) *Cmd {
 	return c
 }
 
-// Silent suppresses default forwarding of the command's standard streams to the
-// context's stdout and stderr writers.
-func (c *Cmd) Silent() *Cmd {
-	c.silent = true
-	return c
-}
-
 // Run runs the command and waits for it to complete.
 func (c *Cmd) Run() error {
 	if c.context.DebugLogger != nil {
@@ -134,16 +126,12 @@ func (c *Cmd) Run() error {
 
 	c.cmd = exec.Command(args[0], args[1:]...)
 	c.cmd.Env = append(os.Environ(), c.envs...)
+	c.cmd.Stdout = c.context.Stdout
+	c.cmd.Stderr = c.context.Stderr
 
+	c.cmd.Stdin = c.context.Stdin
 	if c.stdin != nil {
 		c.cmd.Stdin = c.stdin
-	} else {
-		c.cmd.Stdin = c.context.Stdin
-	}
-
-	if !c.silent {
-		c.cmd.Stdout = c.context.Stdout
-		c.cmd.Stderr = c.context.Stderr
 	}
 
 	return c.cmd.Run()
