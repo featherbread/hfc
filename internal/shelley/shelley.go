@@ -118,19 +118,42 @@ func (c *Cmd) Silent() *Cmd {
 
 // Run runs the command and waits for it to complete.
 func (c *Cmd) Run() error {
-	c.logDebug()
-	c.initCmd()
-	return c.run()
+	if c.context.DebugLogger != nil {
+		var envString string
+		for _, env := range c.envs {
+			split := strings.SplitN(env, "=", 2)
+			envString += split[0] + "=" + shellquote.Join(split[1]) + " "
+		}
+		c.context.DebugLogger.Print(envString + shellquote.Join(c.args...))
+	}
+
+	args := c.args
+	if alias, ok := c.context.Aliases[args[0]]; ok {
+		args = append(slices.Clone(alias), args[1:]...)
+	}
+
+	c.cmd = exec.Command(args[0], args[1:]...)
+	c.cmd.Env = append(os.Environ(), c.envs...)
+
+	if c.stdin != nil {
+		c.cmd.Stdin = c.stdin
+	} else {
+		c.cmd.Stdin = c.context.Stdin
+	}
+
+	if !c.silent {
+		c.cmd.Stdout = c.context.Stdout
+		c.cmd.Stderr = c.context.Stderr
+	}
+
+	return c.cmd.Run()
 }
 
 // Test runs the command, waits for it to complete, and returns whether it
 // exited with a status code of 0. It returns a non-nil error only if the
 // command failed to start, not if it finished with a non-zero status.
 func (c *Cmd) Test() (bool, error) {
-	c.logDebug()
-	c.initCmd()
-
-	err := c.run()
+	err := c.Run()
 	if err == nil {
 		return true, nil
 	}
@@ -141,48 +164,4 @@ func (c *Cmd) Test() (bool, error) {
 	}
 
 	return false, err
-}
-
-func (c *Cmd) initCmd() {
-	args := c.expandedArgs()
-	c.cmd = exec.Command(args[0], args[1:]...)
-	c.cmd.Env = append(os.Environ(), c.envs...)
-}
-
-func (c *Cmd) expandedArgs() []string {
-	if alias, ok := c.context.Aliases[c.args[0]]; ok {
-		return append(slices.Clone(alias), c.args[1:]...)
-	}
-	return c.args
-}
-
-func (c *Cmd) run() error {
-	if c.stdin != nil {
-		c.cmd.Stdin = c.stdin
-	} else {
-		c.cmd.Stdin = c.context.Stdin
-	}
-
-	if !c.silent {
-		if c.cmd.Stdout == nil {
-			c.cmd.Stdout = c.context.Stdout
-		}
-		c.cmd.Stderr = c.context.Stderr
-	}
-
-	return c.cmd.Run()
-}
-
-func (c *Cmd) logDebug() {
-	if c.context.DebugLogger == nil {
-		return
-	}
-
-	var envString string
-	for _, env := range c.envs {
-		split := strings.SplitN(env, "=", 2)
-		envString += split[0] + "=" + shellquote.Join(split[1]) + " "
-	}
-
-	c.context.DebugLogger.Print(envString + shellquote.Join(c.args...))
 }
