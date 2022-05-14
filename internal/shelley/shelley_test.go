@@ -100,6 +100,30 @@ func TestEnv(t *testing.T) {
 	}
 }
 
+func TestAliasExpansion(t *testing.T) {
+	var stdout, debug bytes.Buffer
+	context := &Context{
+		Stdout:      &stdout,
+		Aliases:     map[string][]string{"shellrun": {"sh", "-c"}},
+		DebugLogger: log.New(&debug, "", 0),
+	}
+
+	err := context.Command("shellrun", `echo "$SHELLEY"`).Env("SHELLEY", "aliased").Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const wantStdout = "aliased\n"
+	if stdout.String() != wantStdout {
+		t.Errorf("unexpected output; got %q, want %q", stdout.String(), wantStdout)
+	}
+
+	const wantDebug = "SHELLEY=aliased shellrun " + `'echo "$SHELLEY"'` + "\n"
+	if debug.String() != wantDebug {
+		t.Errorf("unexpected debug; got %q, want %q", debug.String(), wantDebug)
+	}
+}
+
 func TestTestTrue(t *testing.T) {
 	got, err := Command("true").Test()
 	if err != nil {
