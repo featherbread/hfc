@@ -40,12 +40,6 @@ func ExitIfError(err error) {
 	log.Fatal(err)
 }
 
-// GetOrExit returns result after checking err with ExitIfError.
-func GetOrExit[T any](result T, err error) T {
-	ExitIfError(err)
-	return result
-}
-
 // DefaultContext is the Context for commands created by the top level Command
 // function.
 var DefaultContext = &Context{
@@ -129,10 +123,10 @@ func (c *Cmd) Run() error {
 	return c.run()
 }
 
-// Successful runs the command, waits for it to complete, and returns whether it
+// Test runs the command, waits for it to complete, and returns whether it
 // exited with a status code of 0. It returns a non-nil error only if the
 // command failed to start, not if it finished with a non-zero status.
-func (c *Cmd) Successful() (bool, error) {
+func (c *Cmd) Test() (bool, error) {
 	c.logDebug()
 	c.initCmd()
 

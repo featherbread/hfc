@@ -117,22 +117,22 @@ func TestSilent(t *testing.T) {
 	}
 }
 
-func TestSuccessfulTrue(t *testing.T) {
-	got, err := Command("true").Successful()
+func TestTestTrue(t *testing.T) {
+	got, err := Command("true").Test()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !got {
-		t.Error(`Command("true").Successful() == false`)
+		t.Error(`Command("true").Test() == false`)
 	}
 }
 
-func TestSuccessfulFalse(t *testing.T) {
-	got, err := Command("false").Successful()
+func TestTestFalse(t *testing.T) {
+	got, err := Command("false").Test()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got {
-		t.Error(`Command("false").Successful() == true`)
+		t.Error(`Command("false").Test() == true`)
 	}
 }

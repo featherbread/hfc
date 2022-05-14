@@ -54,9 +54,10 @@ func runUpload(cmd *cobra.Command, args []string) {
 	tag := strconv.FormatInt(time.Now().Unix(), 10)
 	image := repository + ":" + tag
 
-	authenticated := shelley.GetOrExit(shelley.
-		Command("zeroimage", "check-auth", "--push", image).
-		Successful())
+	authenticated, err := shelley.Command("zeroimage", "check-auth", "--push", image).Test()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if !authenticated {
 		password, err := getLoginPassword(ecrClient)
