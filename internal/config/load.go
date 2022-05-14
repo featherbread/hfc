@@ -32,7 +32,7 @@ func Load() (Config, error) {
 
 	var localConfig Config
 	localConfigPath := filepath.Join(filepath.Dir(baseConfigPath), LocalFilename)
-	if stat, err := os.Stat(localConfigPath); err == nil && !stat.IsDir() {
+	if _, err := os.Stat(localConfigPath); err == nil {
 		localConfig, err = LoadFile(localConfigPath)
 		if err != nil {
 			return Config{}, err
