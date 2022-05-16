@@ -1,10 +1,12 @@
-hfc is a strongly opinionated tool for deploying AWS Lambda functions written
-in Go with AWS CloudFormation.
+# hfc: Helper for CloudFormation
 
-It is hackishly implemented, relatively undocumented, and not necessarily easy
-to use at the moment. I'm only making it public so a couple of personal
-projects can take advantage of it.
+hfc is a strongly opinionated tool to deploy Go applications that meet very
+specific requirements with AWS CloudFormation. It is made public for the sake
+of other personal projects that rely on this specific workflow, as an
+improvement over copy-pasting a shell script between multiple projects.
 
-Please come back, though, and things will probably be more advanced. Or, if I
-abandon it but it looks nice to you, feel free to take advantage of the MIT
-License.
+I do not recommend hfc for general use. Try [AWS SAM][sam] instead, and see the
+[go-al2][go-al2] example in particular.
+
+[sam]: https://aws.amazon.com/serverless/sam/
+[go-al2]: https://github.com/aws-samples/sessions-with-aws-sam/tree/master/go-al2
