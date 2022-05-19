@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/aws/aws-sdk-go-v2/service/ecr/types"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -33,41 +33,30 @@ func runCleanRepository(cmd *cobra.Command, args []string) {
 
 	group, ctx := errgroup.WithContext(context.Background())
 
-	var repoTags []string
-	group.Go(goGetRepoTags(ctx, ecrClient, &repoTags))
+	var repoTagList []string
+	group.Go(goGetRepoTags(ctx, ecrClient, &repoTagList))
 
-	stackTags := make([]string, len(rootConfig.Stacks))
+	stackTagList := make([]string, len(rootConfig.Stacks))
 	for i, stack := range rootConfig.Stacks {
 		// TODO: Limit concurrent stack reads?
-		group.Go(goGetStackTag(ctx, cfnClient, stack.Name, &stackTags[i]))
+		group.Go(goGetStackTag(ctx, cfnClient, stack.Name, &stackTagList[i]))
 	}
 
 	if err := group.Wait(); err != nil {
 		log.Fatal(err)
 	}
 
-	sort.Strings(repoTags)
-	if len(repoTags) != len(slices.Compact(repoTags)) {
+	repoTags := mapset.NewSet(repoTagList...)
+	stackTags := mapset.NewSet(stackTagList...)
+
+	if repoTags.Cardinality() != len(repoTagList) {
 		log.Fatal("repository tag list contained duplicate tags")
 	}
 
-	sort.Strings(stackTags)
-	stackTags = slices.Compact(stackTags)
-
-	var keepTags, deleteTags []string
-	for len(repoTags) > 0 && len(stackTags) > 0 {
-		switch {
-		case repoTags[0] == stackTags[0]:
-			keepTags = append(keepTags, repoTags[0])
-			repoTags, stackTags = repoTags[1:], stackTags[1:]
-		case repoTags[0] < stackTags[0]:
-			deleteTags = append(deleteTags, repoTags[0])
-			repoTags = repoTags[1:]
-		case stackTags[0] < repoTags[0]:
-			log.Fatalf("stack deployed with image tag not in repository: %s", stackTags[0])
-		}
-	}
-	deleteTags = append(deleteTags, repoTags...)
+	keepTags := repoTags.Intersect(stackTags).ToSlice()
+	deleteTags := repoTags.Difference(stackTags).ToSlice()
+	sort.Strings(keepTags)
+	sort.Strings(deleteTags)
 
 	if len(deleteTags) == 0 {
 		log.Printf("Repository is clean enough, no tags to delete.")
