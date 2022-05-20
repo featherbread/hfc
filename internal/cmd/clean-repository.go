@@ -46,8 +46,8 @@ func runCleanRepository(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	repoTags := mapset.NewSet(repoTagList...)
-	stackTags := mapset.NewSet(stackTagList...)
+	repoTags := mapset.NewThreadUnsafeSet(repoTagList...)
+	stackTags := mapset.NewThreadUnsafeSet(stackTagList...)
 
 	if repoTags.Cardinality() != len(repoTagList) {
 		log.Fatal("repository tag list contained duplicate tags")
