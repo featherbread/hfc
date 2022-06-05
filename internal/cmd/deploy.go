@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -29,7 +30,7 @@ func init() {
 
 func runDeploy(cmd *cobra.Command, args []string) {
 	latestImageRaw, err := os.ReadFile(rootState.LatestImagePath())
-	latestImage := string(latestImageRaw)
+	latestImage := strings.TrimSpace(string(latestImageRaw))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		log.Fatal("must upload a binary before deploying")

@@ -75,7 +75,7 @@ func runUpload(cmd *cobra.Command, args []string) {
 		Command("zeroimage", "build", "--platform", "linux/arm64", "--push", image, outputPath).
 		Run())
 
-	if err := os.WriteFile(rootState.LatestImagePath(), []byte(image), 0644); err != nil {
+	if err := os.WriteFile(rootState.LatestImagePath(), append([]byte(image), '\n'), 0644); err != nil {
 		log.Fatal(err)
 	}
 }
