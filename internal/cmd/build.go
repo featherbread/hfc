@@ -36,7 +36,13 @@ func runBuild(cmd *cobra.Command, args []string) {
 	}
 
 	shelley.ExitIfError(shelley.
-		Command("go", "build", "-v", "-ldflags=-s -w", "-o", outputPath, rootConfig.Build.Path).
+		Command(
+			"go", "build", "-v",
+			"-ldflags", "-s -w",
+			"-tags", "lambda.norpc",
+			"-o", outputPath,
+			rootConfig.Build.Path,
+		).
 		Env("CGO_ENABLED", "0").Env("GOOS", "linux").Env("GOARCH", "arm64").
 		Run())
 }
