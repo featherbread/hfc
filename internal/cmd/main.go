@@ -37,7 +37,7 @@ var rootCmd = &cobra.Command{
 
 		shelley.DefaultContext.DebugLogger = log.New(log.Writer(), "[hfc] $ ", 0)
 		shelley.DefaultContext.Aliases["zeroimage"] = []string{
-			"go", "run", "go.alexhamlin.co/zeroimage@main"}
+			"go", "run", "go.alexhamlin.co/zeroimage@latest"}
 
 		configPath, err := config.FindPath()
 		if err != nil {
