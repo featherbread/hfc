@@ -7,6 +7,7 @@ type Config struct {
 	Project    ProjectConfig    `toml:"project"`
 	Build      BuildConfig      `toml:"build"`
 	Repository RepositoryConfig `toml:"repository"`
+	Bucket     BucketConfig     `toml:"bucket"`
 	Template   TemplateConfig   `toml:"template"`
 	Stacks     []StackConfig    `toml:"stacks"`
 }
@@ -36,6 +37,12 @@ type BuildConfig struct {
 // RepositoryConfig represents the configuration for uploading a containerized
 // Go binary to the AWS Elastic Container Registry.
 type RepositoryConfig struct {
+	Name string `toml:"name"`
+}
+
+// BucketConfig represents the configuration for uploading a Go binary in a
+// Lambda .zip archive to an Amazon S3 bucket.
+type BucketConfig struct {
 	Name string `toml:"name"`
 }
 
