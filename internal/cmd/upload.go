@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -12,7 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/spf13/cobra"
 
 	"go.alexhamlin.co/hfc/internal/shelley"
@@ -44,6 +50,71 @@ func runUpload(cmd *cobra.Command, args []string) {
 		log.Fatalf("%s is not a regular file", outputPath)
 	}
 
+	switch {
+	case rootConfig.Bucket.Name != "":
+		uploadAsLambdaPackage(outputPath)
+	case rootConfig.Repository.Name != "":
+		uploadAsContainerImage(outputPath)
+	default:
+		log.Fatal("no valid upload configuration available")
+	}
+}
+
+func uploadAsLambdaPackage(outputPath string) {
+	log.Print("Building deployment package")
+	lambdaPackage, err := createLambdaPackage(outputPath)
+	if err != nil {
+		log.Fatalf("failed to create deployment package: %v", err)
+	}
+
+	var (
+		s3Client   = s3.NewFromConfig(awsConfig)
+		bucket     = rootConfig.Bucket.Name
+		key        = strconv.FormatInt(time.Now().Unix(), 10) + ".zip"
+		hashBytes  = sha256.Sum256(lambdaPackage)
+		hashString = base64.StdEncoding.EncodeToString(hashBytes[:])
+	)
+
+	log.Printf("Uploading deployment package to s3://%s/%s", bucket, key)
+	_, err = s3Client.PutObject(context.Background(), &s3.PutObjectInput{
+		Bucket:         aws.String(bucket),
+		Key:            aws.String(key),
+		Body:           bytes.NewReader(lambdaPackage),
+		ContentLength:  int64(len(lambdaPackage)),
+		ChecksumSHA256: aws.String(hashString),
+	})
+	if err != nil {
+		log.Fatalf("failed to upload deployment package: %v", err)
+	}
+
+	if err := os.WriteFile(rootState.LatestLambdaPackagePath(), append([]byte(key), '\n'), 0644); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func createLambdaPackage(handlerPath string) ([]byte, error) {
+	handlerBinary, err := os.Open(handlerPath)
+	if err != nil {
+		return nil, err
+	}
+	defer handlerBinary.Close()
+
+	var output bytes.Buffer
+	zw := zip.NewWriter(&output)
+	hw, err := zw.Create("bootstrap")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(hw, handlerBinary); err != nil {
+		return nil, err
+	}
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	return output.Bytes(), nil
+}
+
+func uploadAsContainerImage(outputPath string) {
 	ecrClient := ecr.NewFromConfig(awsConfig)
 	repository, err := getRepositoryURI(ecrClient, rootConfig.Repository.Name)
 	if err != nil {
