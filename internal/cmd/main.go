@@ -34,10 +34,7 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		log.SetPrefix("[hfc] ")
 		log.SetFlags(0)
-
 		shelley.DefaultContext.DebugLogger = log.New(log.Writer(), "[hfc] $ ", 0)
-		shelley.DefaultContext.Aliases["zeroimage"] = []string{
-			"go", "run", "go.alexhamlin.co/zeroimage@latest"}
 
 		configPath, err := config.FindPath()
 		if err != nil {

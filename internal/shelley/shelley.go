@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/kballard/go-shellquote"
-	"golang.org/x/exp/slices"
 )
 
 // ExitError is the type of error returned by commands that completed with a
@@ -46,7 +45,6 @@ var DefaultContext = &Context{
 	Stdin:       os.Stdin,
 	Stdout:      os.Stdout,
 	Stderr:      os.Stderr,
-	Aliases:     make(map[string][]string),
 	DebugLogger: nil,
 }
 
@@ -58,10 +56,6 @@ type Context struct {
 	Stdout io.Writer
 	// Stderr is the default destination for stderr.
 	Stderr io.Writer
-	// Aliases is a mapping from alias names to expanded arguments. When a command
-	// is built whose first argument matches a defined alias, the alias will be
-	// replaced with the associated arguments before executing the command.
-	Aliases map[string][]string
 	// DebugLogger logs all commands as they are executed, approximating the
 	// behavior of "set -x" in a shell. Debug lines include environment variables
 	// along with the exact arguments that a command was built with, with shell
@@ -119,12 +113,7 @@ func (c *Cmd) Run() error {
 		c.context.DebugLogger.Print(envString + shellquote.Join(c.args...))
 	}
 
-	args := c.args
-	if alias, ok := c.context.Aliases[args[0]]; ok {
-		args = append(slices.Clone(alias), args[1:]...)
-	}
-
-	c.cmd = exec.Command(args[0], args[1:]...)
+	c.cmd = exec.Command(c.args[0], c.args[1:]...)
 	c.cmd.Env = append(os.Environ(), c.envs...)
 	c.cmd.Stdout = c.context.Stdout
 	c.cmd.Stderr = c.context.Stderr
