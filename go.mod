@@ -7,7 +7,6 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.16.5
 	github.com/aws/aws-sdk-go-v2/config v1.15.11
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.21.1
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.17.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.11
 	github.com/google/go-cmp v0.5.8
 	github.com/imdario/mergo v0.3.13

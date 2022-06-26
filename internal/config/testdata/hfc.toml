@@ -4,8 +4,8 @@ name = "hfc"
 [build]
 path = "./cmd/hfc"
 
-[repository]
-name = "hfc"
+[upload]
+bucket = "hfc"
 
 [template]
 path = "CloudFormation.yaml"
