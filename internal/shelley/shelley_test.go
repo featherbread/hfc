@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 	// Or, maybe it's not, and I don't. This is sort of a hack to globally skip
 	// these tests if we can't assume that a reasonable baseline set of commands
 	// is available.
-	requiredCommands := []string{"sh", "cat", "true", "false", "grep", "sort", "tr"}
+	requiredCommands := []string{"sh", "cat", "false", "sort"}
 	for _, cmd := range requiredCommands {
 		if _, err := exec.LookPath(cmd); err != nil {
 			return
