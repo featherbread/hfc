@@ -96,23 +96,3 @@ func TestEnv(t *testing.T) {
 		t.Errorf("unexpected output; got %q, want %q", stdout.String(), wantStdout)
 	}
 }
-
-func TestTestTrue(t *testing.T) {
-	got, err := Command("true").Test()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got {
-		t.Error(`Command("true").Test() == false`)
-	}
-}
-
-func TestTestFalse(t *testing.T) {
-	got, err := Command("false").Test()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got {
-		t.Error(`Command("false").Test() == true`)
-	}
-}

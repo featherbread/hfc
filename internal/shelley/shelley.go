@@ -112,20 +112,3 @@ func (c *Cmd) Run() error {
 
 	return c.cmd.Run()
 }
-
-// Test runs the command, waits for it to complete, and returns whether it
-// exited with a status code of 0. It returns a non-nil error only if the
-// command failed to start, not if it finished with a non-zero status.
-func (c *Cmd) Test() (bool, error) {
-	err := c.Run()
-	if err == nil {
-		return true, nil
-	}
-
-	var exitErr ExitError
-	if errors.As(err, &exitErr) {
-		return false, nil
-	}
-
-	return false, err
-}
