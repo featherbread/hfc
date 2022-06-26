@@ -104,8 +104,8 @@ func Check(config Config) (ok bool, err error) {
 		hasRepository = (config.Repository != RepositoryConfig{})
 		hasBucket     = (config.Bucket != BucketConfig{})
 	)
-	if hasRepository == hasBucket {
-		return false, errors.New("config needs exactly one of [repository] or [bucket]")
+	if !hasRepository && !hasBucket {
+		return false, errors.New("config needs at least one of [repository] or [bucket]")
 	}
 
 	return true, nil

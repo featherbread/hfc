@@ -50,13 +50,11 @@ func runUpload(cmd *cobra.Command, args []string) {
 		log.Fatalf("%s is not a regular file", outputPath)
 	}
 
-	switch {
-	case rootConfig.Bucket.Name != "":
+	if rootConfig.Bucket.Name != "" {
 		uploadAsLambdaPackage(outputPath)
-	case rootConfig.Repository.Name != "":
+	}
+	if rootConfig.Repository.Name != "" {
 		uploadAsContainerImage(outputPath)
-	default:
-		log.Fatal("no valid upload configuration available")
 	}
 }
 

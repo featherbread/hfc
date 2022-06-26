@@ -59,16 +59,16 @@ func TestCheck(t *testing.T) {
 		Config:      Config{Bucket: BucketConfig{Name: "test"}},
 		Valid:       true,
 	}, {
-		Description: "neither",
-		Config:      Config{},
-		Valid:       false,
-	}, {
 		Description: "both",
 		Config: Config{
 			Repository: RepositoryConfig{Name: "test"},
 			Bucket:     BucketConfig{Name: "test"},
 		},
-		Valid: false,
+		Valid: true,
+	}, {
+		Description: "neither",
+		Config:      Config{},
+		Valid:       false,
 	}}
 
 	for _, tc := range testCases {

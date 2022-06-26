@@ -79,15 +79,27 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	}
 }
 
-func getDeploymentParameters() ([]string, error) {
-	switch {
-	case rootConfig.Bucket.Name != "":
-		return getS3DeploymentParameters()
-	case rootConfig.Repository.Name != "":
-		return getImageDeploymentParameters()
-	default:
-		return nil, errors.New("no valid upload configuration available")
+func getDeploymentParameters() (params []string, err error) {
+	if rootConfig.Bucket.Name != "" {
+		ps, err := getS3DeploymentParameters()
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, ps...)
 	}
+
+	if rootConfig.Repository.Name != "" {
+		ps, err := getImageDeploymentParameters()
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, ps...)
+	}
+
+	if len(params) == 0 {
+		err = errors.New("no valid upload configuration available")
+	}
+	return
 }
 
 func getS3DeploymentParameters() ([]string, error) {
@@ -95,7 +107,7 @@ func getS3DeploymentParameters() ([]string, error) {
 	latestPackage := strings.TrimSpace(string(latestPackageRaw))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return nil, errors.New("must upload a binary before deploying")
+		return nil, errors.New("must upload a deployment package before deploying")
 	case err != nil:
 		return nil, err
 	default:
@@ -111,7 +123,7 @@ func getImageDeploymentParameters() ([]string, error) {
 	latestImage := strings.TrimSpace(string(latestImageRaw))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return nil, errors.New("must upload a binary before deploying")
+		return nil, errors.New("must upload a container image before deploying")
 	case err != nil:
 		return nil, err
 	default:
