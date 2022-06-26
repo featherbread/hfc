@@ -16,8 +16,8 @@ func TestLoad(t *testing.T) {
 		Build: BuildConfig{
 			Path: "./cmd/hfc",
 		},
-		Bucket: BucketConfig{
-			Name: "hfc",
+		Upload: UploadConfig{
+			Bucket: "hfc",
 		},
 		Template: TemplateConfig{
 			Path:         "CloudFormation.yaml",

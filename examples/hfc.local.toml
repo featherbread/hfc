@@ -4,8 +4,8 @@
 [aws]
 profile = "importbounce"
 
-[repository]
-name = "importbounce"
+[upload]
+bucket = "importbounce-lambda-XXXXXX"
 
 [[stacks]]
 name = "ImportBounceTest"

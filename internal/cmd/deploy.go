@@ -89,7 +89,7 @@ func getDeploymentParameters() ([]string, error) {
 		return nil, err
 	default:
 		return []string{
-			"CodeS3Bucket=" + rootConfig.Bucket.Name,
+			"CodeS3Bucket=" + rootConfig.Upload.Bucket,
 			"CodeS3Key=" + latestPackage,
 		}, nil
 	}

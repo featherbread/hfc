@@ -6,7 +6,7 @@ import "golang.org/x/exp/slices"
 type Config struct {
 	Project  ProjectConfig  `toml:"project"`
 	Build    BuildConfig    `toml:"build"`
-	Bucket   BucketConfig   `toml:"bucket"`
+	Upload   UploadConfig   `toml:"upload"`
 	Template TemplateConfig `toml:"template"`
 	Stacks   []StackConfig  `toml:"stacks"`
 }
@@ -33,10 +33,10 @@ type BuildConfig struct {
 	Path string `toml:"path"`
 }
 
-// BucketConfig represents the configuration for uploading a Go binary in a
+// UploadConfig represents the configuration for uploading a Go binary in a
 // Lambda .zip archive to an Amazon S3 bucket.
-type BucketConfig struct {
-	Name string `toml:"name"`
+type UploadConfig struct {
+	Bucket string `toml:"bucket"`
 }
 
 // TemplateConfig represents the configuration of the AWS CloudFormation

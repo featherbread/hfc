@@ -43,7 +43,7 @@ func runUpload(cmd *cobra.Command, args []string) {
 
 	var (
 		s3Client   = s3.NewFromConfig(awsConfig)
-		bucket     = rootConfig.Bucket.Name
+		bucket     = rootConfig.Upload.Bucket
 		key        = strconv.FormatInt(time.Now().Unix(), 10) + ".zip"
 		hashBytes  = sha256.Sum256(lambdaPackage)
 		hashString = base64.StdEncoding.EncodeToString(hashBytes[:])
