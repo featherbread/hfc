@@ -37,6 +37,7 @@ type BuildConfig struct {
 // Lambda .zip archive to an Amazon S3 bucket.
 type UploadConfig struct {
 	Bucket string `toml:"bucket"`
+	Prefix string `toml:"prefix"`
 }
 
 // TemplateConfig represents the configuration of the AWS CloudFormation
