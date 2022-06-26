@@ -4,12 +4,11 @@ import "golang.org/x/exp/slices"
 
 // Config represents a full configuration.
 type Config struct {
-	Project    ProjectConfig    `toml:"project"`
-	Build      BuildConfig      `toml:"build"`
-	Repository RepositoryConfig `toml:"repository"`
-	Bucket     BucketConfig     `toml:"bucket"`
-	Template   TemplateConfig   `toml:"template"`
-	Stacks     []StackConfig    `toml:"stacks"`
+	Project  ProjectConfig  `toml:"project"`
+	Build    BuildConfig    `toml:"build"`
+	Bucket   BucketConfig   `toml:"bucket"`
+	Template TemplateConfig `toml:"template"`
+	Stacks   []StackConfig  `toml:"stacks"`
 }
 
 // FindStack searches for the stack with the given name. If no stack is defined
@@ -32,12 +31,6 @@ type ProjectConfig struct {
 // BuildConfig represents the configuration for building a deployable Go binary.
 type BuildConfig struct {
 	Path string `toml:"path"`
-}
-
-// RepositoryConfig represents the configuration for uploading a containerized
-// Go binary to the AWS Elastic Container Registry.
-type RepositoryConfig struct {
-	Name string `toml:"name"`
 }
 
 // BucketConfig represents the configuration for uploading a Go binary in a

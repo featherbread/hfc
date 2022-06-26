@@ -4,7 +4,7 @@ name = "hfc"
 [build]
 path = "./cmd/hfc"
 
-[repository]
+[bucket]
 name = "hfc"
 
 [template]
