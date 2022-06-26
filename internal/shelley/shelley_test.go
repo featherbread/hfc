@@ -58,18 +58,15 @@ func TestExitError(t *testing.T) {
 	}
 }
 
-func TestStdinWithDebug(t *testing.T) {
+func TestDebug(t *testing.T) {
 	var stdout, debug bytes.Buffer
 	context := &Context{
+		Stdin:       strings.NewReader("one\ntwo\nthree\n"),
 		Stdout:      &stdout,
 		DebugLogger: log.New(&debug, "", 0),
 	}
 
-	err := context.
-		Command("sort").
-		Env("LC_ALL", "C").
-		Stdin(strings.NewReader("one\ntwo\nthree\n")).
-		Run()
+	err := context.Command("sort").Env("LC_ALL", "C").Run()
 	if err != nil {
 		t.Fatal(err)
 	}

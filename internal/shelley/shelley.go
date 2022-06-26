@@ -75,22 +75,13 @@ func (c *Context) Command(args ...string) *Cmd {
 type Cmd struct {
 	context *Context
 	cmd     *exec.Cmd
-
-	args  []string
-	envs  []string
-	stdin io.Reader
+	args    []string
+	envs    []string
 }
 
 // Command initializes a new command using DefaultContext.
 func Command(args ...string) *Cmd {
 	return DefaultContext.Command(args...)
-}
-
-// Stdin overrides the command's stdin to come from the provided reader, rather
-// than the context's stdin.
-func (c *Cmd) Stdin(r io.Reader) *Cmd {
-	c.stdin = r
-	return c
 }
 
 // Env appends an environment value to the command.
@@ -115,13 +106,9 @@ func (c *Cmd) Run() error {
 
 	c.cmd = exec.Command(c.args[0], c.args[1:]...)
 	c.cmd.Env = append(os.Environ(), c.envs...)
+	c.cmd.Stdin = c.context.Stdin
 	c.cmd.Stdout = c.context.Stdout
 	c.cmd.Stderr = c.context.Stderr
-
-	c.cmd.Stdin = c.context.Stdin
-	if c.stdin != nil {
-		c.cmd.Stdin = c.stdin
-	}
 
 	return c.cmd.Run()
 }
