@@ -9,13 +9,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.21.1
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.17.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.11
-	github.com/deckarep/golang-set/v2 v2.1.0
 	github.com/google/go-cmp v0.5.8
 	github.com/imdario/mergo v0.3.13
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/spf13/cobra v1.5.0
 	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
-	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 )
 
 require (
