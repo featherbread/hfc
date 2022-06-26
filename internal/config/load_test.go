@@ -45,6 +45,45 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+func TestCheck(t *testing.T) {
+	testCases := []struct {
+		Description string
+		Config      Config
+		Valid       bool
+	}{{
+		Description: "only repository",
+		Config:      Config{Repository: RepositoryConfig{Name: "test"}},
+		Valid:       true,
+	}, {
+		Description: "only bucket",
+		Config:      Config{Bucket: BucketConfig{Name: "test"}},
+		Valid:       true,
+	}, {
+		Description: "both",
+		Config: Config{
+			Repository: RepositoryConfig{Name: "test"},
+			Bucket:     BucketConfig{Name: "test"},
+		},
+		Valid: true,
+	}, {
+		Description: "neither",
+		Config:      Config{},
+		Valid:       false,
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.Description, func(t *testing.T) {
+			ok, err := Check(tc.Config)
+			if ok != (err == nil) {
+				t.Errorf("ok == %v inconsistent with err == %v", ok, err)
+			}
+			if ok != tc.Valid {
+				t.Fatalf("Check() == %v, want %v", ok, tc.Valid)
+			}
+		})
+	}
+}
+
 func switchDir(dir string) (switchBack func()) {
 	original, err := os.Getwd()
 	if err != nil {

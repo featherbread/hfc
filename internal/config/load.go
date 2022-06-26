@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,7 +40,11 @@ func Load() (Config, error) {
 		}
 	}
 
-	return Merge(baseConfig, localConfig), nil
+	config := Merge(baseConfig, localConfig)
+	if ok, err := Check(config); !ok {
+		return Config{}, err
+	}
+	return config, nil
 }
 
 // FindPath returns the rooted path to the configuration file in the current
@@ -90,4 +95,18 @@ func Merge(configs ...Config) Config {
 		}
 	}
 	return result
+}
+
+// Validate checks the provided config for errors that may prevent hfc from
+// operating as expected.
+func Check(config Config) (ok bool, err error) {
+	var (
+		hasRepository = (config.Repository != RepositoryConfig{})
+		hasBucket     = (config.Bucket != BucketConfig{})
+	)
+	if !hasRepository && !hasBucket {
+		return false, errors.New("config needs at least one of [repository] or [bucket]")
+	}
+
+	return true, nil
 }

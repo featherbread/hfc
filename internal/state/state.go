@@ -47,6 +47,12 @@ func (s State) BinaryPath(name string) (string, error) {
 	return filepath.Rel(cwd, fullPath)
 }
 
+// LatestLambdaPackagePath returns the absolute path to the file containing the
+// S3 key of the latest Lambda deployment package.
+func (s State) LatestLambdaPackagePath() string {
+	return s.Path("latest-lambda-package")
+}
+
 // LatestImagePath returns the absolute path to the file containing the latest
 // image name.
 func (s State) LatestImagePath() string {

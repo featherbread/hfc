@@ -29,15 +29,6 @@ func init() {
 }
 
 func runDeploy(cmd *cobra.Command, args []string) {
-	latestImageRaw, err := os.ReadFile(rootState.LatestImagePath())
-	latestImage := strings.TrimSpace(string(latestImageRaw))
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		log.Fatal("must upload a binary before deploying")
-	case err != nil:
-		log.Fatal(err)
-	}
-
 	stackName := args[0]
 	stack, ok := rootConfig.FindStack(stackName)
 	if !ok {
@@ -49,11 +40,16 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		capabilityArgs = append([]string{"--capabilities"}, rootConfig.Template.Capabilities...)
 	}
 
-	parameterOverrideArgs := slices.Clone(args[1:])
-	for key, value := range stack.Parameters {
-		parameterOverrideArgs = append(parameterOverrideArgs, key+"="+value)
+	deploymentParameters, err := getDeploymentParameters()
+	if err != nil {
+		log.Fatal(err)
 	}
-	sort.Strings(parameterOverrideArgs)
+
+	overrideParameters := slices.Clone(args[1:])
+	for key, value := range stack.Parameters {
+		overrideParameters = append(overrideParameters, key+"="+value)
+	}
+	sort.Strings(overrideParameters)
 
 	deployArgs := concat(
 		[]string{
@@ -63,8 +59,9 @@ func runDeploy(cmd *cobra.Command, args []string) {
 			"--no-fail-on-empty-changeset",
 		},
 		capabilityArgs,
-		[]string{"--parameter-overrides", "ImageUri=" + latestImage},
-		parameterOverrideArgs,
+		[]string{"--parameter-overrides"},
+		deploymentParameters,
+		overrideParameters,
 	)
 	shelley.ExitIfError(shelley.Command(deployArgs...).Run())
 
@@ -79,6 +76,58 @@ func runDeploy(cmd *cobra.Command, args []string) {
 
 	for _, output := range description.Stacks[0].Outputs {
 		log.Printf("%s (%s):\n\t%s", *output.Description, *output.OutputKey, *output.OutputValue)
+	}
+}
+
+func getDeploymentParameters() (params []string, err error) {
+	if rootConfig.Bucket.Name != "" {
+		ps, err := getS3DeploymentParameters()
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, ps...)
+	}
+
+	if rootConfig.Repository.Name != "" {
+		ps, err := getImageDeploymentParameters()
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, ps...)
+	}
+
+	if len(params) == 0 {
+		err = errors.New("no valid upload configuration available")
+	}
+	return
+}
+
+func getS3DeploymentParameters() ([]string, error) {
+	latestPackageRaw, err := os.ReadFile(rootState.LatestLambdaPackagePath())
+	latestPackage := strings.TrimSpace(string(latestPackageRaw))
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, errors.New("must upload a deployment package before deploying")
+	case err != nil:
+		return nil, err
+	default:
+		return []string{
+			"CodeS3Bucket=" + rootConfig.Bucket.Name,
+			"CodeS3Key=" + latestPackage,
+		}, nil
+	}
+}
+
+func getImageDeploymentParameters() ([]string, error) {
+	latestImageRaw, err := os.ReadFile(rootState.LatestImagePath())
+	latestImage := strings.TrimSpace(string(latestImageRaw))
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, errors.New("must upload a container image before deploying")
+	case err != nil:
+		return nil, err
+	default:
+		return []string{"ImageUri=" + latestImage}, nil
 	}
 }
 
