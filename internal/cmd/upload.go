@@ -77,15 +77,15 @@ func createLambdaPackage(handlerPath string) ([]byte, error) {
 	defer handlerBinary.Close()
 
 	var output bytes.Buffer
-	zw := zip.NewWriter(&output)
-	hw, err := zw.Create("bootstrap")
+	zipWriter := zip.NewWriter(&output)
+	handlerWriter, err := zipWriter.Create("bootstrap")
 	if err != nil {
 		return nil, err
 	}
-	if _, err := io.Copy(hw, handlerBinary); err != nil {
+	if _, err := io.Copy(handlerWriter, handlerBinary); err != nil {
 		return nil, err
 	}
-	if err := zw.Close(); err != nil {
+	if err := zipWriter.Close(); err != nil {
 		return nil, err
 	}
 	return output.Bytes(), nil
