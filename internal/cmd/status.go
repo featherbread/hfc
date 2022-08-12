@@ -30,11 +30,11 @@ func runStatus(cmd *cobra.Command, args []string) {
 	latestPackage := strings.TrimSpace(string(latestPackageRaw))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		fmt.Printf("LATEST BUILD: (no current build)\n\n")
+		fmt.Printf("CURRENT BUILD: (no current build)\n\n")
 	case err != nil:
 		log.Fatal(err)
 	default:
-		fmt.Printf("LATEST BUILD: %s\n\n", latestPackage)
+		fmt.Printf("CURRENT BUILD: %s\n\n", latestPackage)
 	}
 
 	fmt.Printf("DEPLOYED VERSIONS:\n")
@@ -84,9 +84,9 @@ func runStatus(cmd *cobra.Command, args []string) {
 
 		tw.WriteColumn(key)
 		if key == latestPackage {
-			tw.WriteColumn("(latest)")
+			tw.WriteColumn("(current)")
 		} else {
-			tw.WriteColumn("(out of date)")
+			tw.WriteColumn("(not current)")
 		}
 		tw.EndLine()
 	}
