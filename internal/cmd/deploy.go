@@ -35,6 +35,11 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		log.Fatalf("stack %s is not configured", stackName)
 	}
 
+	var regionArgs []string
+	if rootConfig.AWS.Region != "" {
+		regionArgs = append([]string{"--region"}, rootConfig.AWS.Region)
+	}
+
 	var capabilityArgs []string
 	if len(rootConfig.Template.Capabilities) > 0 {
 		capabilityArgs = append([]string{"--capabilities"}, rootConfig.Template.Capabilities...)
@@ -52,8 +57,9 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	sort.Strings(overrideParameters)
 
 	deployArgs := concat(
+		[]string{"aws", "cloudformation", "deploy"},
+		regionArgs,
 		[]string{
-			"aws", "cloudformation", "deploy",
 			"--template-file", rootConfig.Template.Path,
 			"--stack-name", stackName,
 			"--no-fail-on-empty-changeset",

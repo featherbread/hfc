@@ -1,3 +1,6 @@
+[aws]
+region = "us-west-2"
+
 [[stacks]]
 name = "HFCStaging"
 

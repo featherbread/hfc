@@ -49,7 +49,10 @@ var rootCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		awsConfig, err = awsconfig.LoadDefaultConfig(context.Background())
+		awsConfig, err = awsconfig.LoadDefaultConfig(
+			context.Background(),
+			awsconfig.WithRegion(rootConfig.AWS.Region),
+		)
 		if err != nil {
 			log.Fatal(err)
 		}

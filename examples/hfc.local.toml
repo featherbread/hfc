@@ -1,9 +1,6 @@
 # This is an example local configuration, which defines settings for one
 # individual's specific deployments of the CloudFormation template.
 
-[aws]
-profile = "importbounce"
-
 [upload]
 bucket = "importbounce-lambda-XXXXXX"
 

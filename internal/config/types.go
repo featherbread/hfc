@@ -5,6 +5,7 @@ import "golang.org/x/exp/slices"
 // Config represents a full configuration.
 type Config struct {
 	Project  ProjectConfig  `toml:"project"`
+	AWS      AWSConfig      `toml:"aws"`
 	Build    BuildConfig    `toml:"build"`
 	Upload   UploadConfig   `toml:"upload"`
 	Template TemplateConfig `toml:"template"`
@@ -26,6 +27,14 @@ func (c *Config) FindStack(name string) (stack StackConfig, ok bool) {
 // expected to be common across all possible deployments.
 type ProjectConfig struct {
 	Name string `toml:"name"`
+}
+
+// AWSConfig represents the configuration for all AWS operations in this
+// project.
+type AWSConfig struct {
+	// TODO: Consider allowing per-stack region overrides, even though I don't
+	// personally have a use case for that feature.
+	Region string `toml:"region"`
 }
 
 // BuildConfig represents the configuration for building a deployable Go binary.

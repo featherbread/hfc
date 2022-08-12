@@ -13,6 +13,9 @@ func TestLoad(t *testing.T) {
 		Project: ProjectConfig{
 			Name: "hfc",
 		},
+		AWS: AWSConfig{
+			Region: "us-west-2",
+		},
 		Build: BuildConfig{
 			Path: "./cmd/hfc",
 		},
