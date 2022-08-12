@@ -37,7 +37,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 
 	var regionArgs []string
 	if rootConfig.AWS.Region != "" {
-		regionArgs = append([]string{"--region"}, rootConfig.AWS.Region)
+		regionArgs = []string{"--region", rootConfig.AWS.Region}
 	}
 
 	var capabilityArgs []string
