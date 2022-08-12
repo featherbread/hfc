@@ -63,6 +63,5 @@ func getMainVersion() string {
 			return v
 		}
 	}
-
 	return "v0.0.0-unknown"
 }
