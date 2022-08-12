@@ -42,16 +42,23 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 	cfnClient := cloudformation.NewFromConfig(awsConfig)
 	s3Client := s3.NewFromConfig(awsConfig)
 
-	var candidateS3Keys, stackS3Keys []string
+	var (
+		candidateS3Keys []string
+		stackS3Keys     = make([]string, len(rootConfig.Stacks))
+	)
 	group, ctx := errgroup.WithContext(context.Background())
+	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
 	group.Go(func() (err error) {
 		candidateS3Keys, err = getUploadedS3Keys(ctx, s3Client)
 		return
 	})
-	group.Go(func() (err error) {
-		stackS3Keys, err = getAllStackS3Keys(ctx, cfnClient)
-		return
-	})
+	for i, stack := range rootConfig.Stacks {
+		i, stack := i, stack
+		group.Go(func() (err error) {
+			stackS3Keys[i], err = getStackS3Key(ctx, cfnClient, stack.Name)
+			return
+		})
+	}
 	if err := group.Wait(); err != nil {
 		log.Fatal(err)
 	}
@@ -133,40 +140,4 @@ func getUploadedS3Keys(ctx context.Context, s3Client *s3.Client) ([]string, erro
 		keys[i] = *object.Key
 	}
 	return keys, nil
-}
-
-// getAllStackS3Keys returns the S3 key for the Lambda package currently in use
-// by each known stack, as a list in the same order in which stacks are defined
-// in the hfc configuration.
-func getAllStackS3Keys(ctx context.Context, cfnClient *cloudformation.Client) ([]string, error) {
-	group, ctx := errgroup.WithContext(ctx)
-	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
-
-	keys := make([]string, len(rootConfig.Stacks))
-	for i, stack := range rootConfig.Stacks {
-		i, stack := i, stack
-		group.Go(func() (err error) {
-			keys[i], err = getStackS3Key(ctx, cfnClient, stack.Name)
-			return
-		})
-	}
-
-	err := group.Wait()
-	return keys, err
-}
-
-func getStackS3Key(ctx context.Context, cfnClient *cloudformation.Client, stackName string) (string, error) {
-	stack, err := cfnClient.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
-		StackName: aws.String(stackName),
-	})
-	if err != nil {
-		return "", err
-	}
-
-	for _, p := range stack.Stacks[0].Parameters {
-		if *p.ParameterKey == "CodeS3Key" {
-			return *p.ParameterValue, nil
-		}
-	}
-	return "", fmt.Errorf("stack %s deployed without CodeS3Key parameter", stackName)
 }
