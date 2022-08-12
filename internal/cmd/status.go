@@ -77,11 +77,22 @@ func runStatus(cmd *cobra.Command, args []string) {
 			name := stack.Name
 			group.Go(func() error {
 				key, err := getStackS3Key(ctx, cfnClient, name)
-				if err == nil {
-					lines <- name + "\t" + key + "\n"
-				} else {
-					lines <- name + "\t(no data)\n"
+
+				line := name
+				switch {
+				case err == nil:
+					line += "\t" + key
+					if key == latestPackage {
+						line += "\t(latest)"
+					} else {
+						line += "\t(out of date)"
+					}
+
+				case err != nil:
+					line += "\t(no data)"
 				}
+
+				lines <- line + "\n"
 				return nil
 			})
 		}
