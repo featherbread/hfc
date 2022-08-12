@@ -73,20 +73,22 @@ func runStatus(cmd *cobra.Command, args []string) {
 	}
 
 	for i, stack := range rootConfig.Stacks {
-		tw.WriteString(stack.Name)
+		tw.WriteColumn(stack.Name)
+
 		key := stackS3Keys[i]
-		if key != "" {
-			tw.WriteByte('\t')
-			tw.WriteString(key)
-			if key == latestPackage {
-				tw.WriteString("\t(latest)")
-			} else {
-				tw.WriteString("\t(out of date)")
-			}
-		} else {
-			tw.WriteString("\t(no data)")
+		if key == "" {
+			tw.WriteColumn("(no data)")
+			tw.EndLine()
+			continue
 		}
-		tw.WriteByte('\n')
+
+		tw.WriteColumn(key)
+		if key == latestPackage {
+			tw.WriteColumn("(latest)")
+		} else {
+			tw.WriteColumn("(out of date)")
+		}
+		tw.EndLine()
 	}
 
 	if err := tw.Flush(); err != nil {
@@ -96,7 +98,8 @@ func runStatus(cmd *cobra.Command, args []string) {
 
 type tabWriter struct {
 	*tabwriter.Writer
-	err error
+	inLine bool
+	err    error
 }
 
 func (b *tabWriter) Write(buf []byte) (n int, err error) {
@@ -107,19 +110,24 @@ func (b *tabWriter) Write(buf []byte) (n int, err error) {
 	return n, b.err
 }
 
-func (b *tabWriter) WriteString(s string) error {
-	_, err := b.Write([]byte(s))
-	return err
-}
-
-func (b *tabWriter) WriteByte(x byte) error {
-	_, err := b.Write([]byte{x})
-	return err
-}
-
 func (b *tabWriter) Flush() error {
 	if b.err != nil {
 		return b.err
 	}
 	return b.Writer.Flush()
+}
+
+func (b *tabWriter) WriteColumn(s string) error {
+	if b.inLine {
+		b.Write([]byte("\t"))
+	}
+	b.Write([]byte(s))
+	b.inLine = true
+	return b.err
+}
+
+func (b *tabWriter) EndLine() error {
+	b.Write([]byte("\n"))
+	b.inLine = false
+	return b.err
 }
