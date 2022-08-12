@@ -42,17 +42,16 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 	cfnClient := cloudformation.NewFromConfig(awsConfig)
 	s3Client := s3.NewFromConfig(awsConfig)
 
+	var candidateS3Keys, stackS3Keys []string
 	group, ctx := errgroup.WithContext(context.Background())
-	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
-
-	var candidateS3Keys []string
-	group.Go(goGetS3Objects(ctx, s3Client, &candidateS3Keys))
-
-	stackS3Keys := make([]string, len(rootConfig.Stacks))
-	for i, stack := range rootConfig.Stacks {
-		group.Go(goGetStackS3Key(ctx, cfnClient, stack.Name, &stackS3Keys[i]))
-	}
-
+	group.Go(func() (err error) {
+		candidateS3Keys, err = getUploadedS3Keys(ctx, s3Client)
+		return
+	})
+	group.Go(func() (err error) {
+		stackS3Keys, err = getAllStackS3Keys(ctx, cfnClient)
+		return
+	})
 	if err := group.Wait(); err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +89,9 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 	deleteIdentifiers := make([]types.ObjectIdentifier, len(deleteKeys))
 	for i, key := range deleteKeys {
 		deleteIdentifiers[i] = types.ObjectIdentifier{
-			Key: aws.String(key), // Reminder: https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
+			// Reminder: &key will create pain and sadness here.
+			// https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
+			Key: aws.String(key),
 		}
 	}
 	output, err := s3Client.DeleteObjects(context.Background(), &s3.DeleteObjectsInput{
@@ -114,42 +115,58 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 	log.Print("Deleted all unused objects.")
 }
 
-func goGetS3Objects(ctx context.Context, s3Client *s3.Client, candidateS3Keys *[]string) func() error {
-	return func() error {
-		// This will only allow us to delete up to 1,000 objects at a time... which
-		// is probably enough.
-		output, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-			Bucket: aws.String(rootConfig.Upload.Bucket),
-			Prefix: aws.String(rootConfig.Upload.Prefix),
-		})
-		if err != nil {
-			return err
-		}
-
-		keys := make([]string, len(output.Contents))
-		for i, object := range output.Contents {
-			keys[i] = *object.Key
-		}
-		*candidateS3Keys = keys
-		return nil
+// getUploadedS3Keys returns the S3 keys of all Lambda packages currently in the
+// deployment bucket, in the standard order returned by S3.
+//
+// The current implementation is limited to returning 1,000 keys.
+func getUploadedS3Keys(ctx context.Context, s3Client *s3.Client) ([]string, error) {
+	output, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(rootConfig.Upload.Bucket),
+		Prefix: aws.String(rootConfig.Upload.Prefix),
+	})
+	if err != nil {
+		return nil, err
 	}
+
+	keys := make([]string, len(output.Contents))
+	for i, object := range output.Contents {
+		keys[i] = *object.Key
+	}
+	return keys, nil
 }
 
-func goGetStackS3Key(ctx context.Context, cfnClient *cloudformation.Client, stackName string, s3Key *string) func() error {
-	return func() error {
-		stack, err := cfnClient.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
-			StackName: aws.String(stackName),
-		})
-		if err != nil {
-			return err
-		}
+// getAllStackS3Keys returns the S3 key for the Lambda package currently in use
+// by each known stack, as a list in the same order in which stacks are defined
+// in the hfc configuration.
+func getAllStackS3Keys(ctx context.Context, cfnClient *cloudformation.Client) ([]string, error) {
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
 
-		for _, p := range stack.Stacks[0].Parameters {
-			if *p.ParameterKey == "CodeS3Key" {
-				*s3Key = *p.ParameterValue
-				return nil
-			}
-		}
-		return fmt.Errorf("stack %s deployed without CodeS3Key parameter", stackName)
+	keys := make([]string, len(rootConfig.Stacks))
+	for i, stack := range rootConfig.Stacks {
+		i, stack := i, stack
+		group.Go(func() (err error) {
+			keys[i], err = getStackS3Key(ctx, cfnClient, stack.Name)
+			return
+		})
 	}
+
+	err := group.Wait()
+	return keys, err
+}
+
+func getStackS3Key(ctx context.Context, cfnClient *cloudformation.Client, stackName string) (string, error) {
+	stack, err := cfnClient.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackName),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	for _, p := range stack.Stacks[0].Parameters {
+		if *p.ParameterKey == "CodeS3Key" {
+			return *p.ParameterValue, nil
+		}
+	}
+	return "", fmt.Errorf("stack %s deployed without CodeS3Key parameter", stackName)
 }
