@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -45,6 +44,23 @@ func runStatus(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	cfnClient := cloudformation.NewFromConfig(awsConfig)
+	var group errgroup.Group
+	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
+	stackS3Keys := make([]string, len(rootConfig.Stacks))
+	for i, stack := range rootConfig.Stacks {
+		i, name := i, stack.Name
+		group.Go(func() error {
+			// Errors here are intentionally not hard failures. One misconfigured or
+			// not-yet-deployed stack should not prevent reporting for other stacks.
+			if key, err := getStackS3Key(context.Background(), cfnClient, name); err == nil {
+				stackS3Keys[i] = key
+			}
+			return nil
+		})
+	}
+	group.Wait()
+
 	const (
 		minwidth = 1
 		tabwidth = 8
@@ -52,55 +68,58 @@ func runStatus(cmd *cobra.Command, args []string) {
 		padchar  = ' '
 		flags    = 0
 	)
-	tw := tabwriter.NewWriter(os.Stdout, minwidth, tabwidth, padding, padchar, flags)
-	lines := make(chan string, 1)
+	tw := tabWriter{
+		Writer: tabwriter.NewWriter(os.Stdout, minwidth, tabwidth, padding, padchar, flags),
+	}
 
-	group, ctx := errgroup.WithContext(context.Background())
-
-	group.Go(func() error {
-		for line := range lines {
-			if _, err := io.WriteString(tw, line); err != nil {
-				return err
+	for i, stack := range rootConfig.Stacks {
+		tw.WriteString(stack.Name)
+		key := stackS3Keys[i]
+		if key != "" {
+			tw.WriteByte('\t')
+			tw.WriteString(key)
+			if key == latestPackage {
+				tw.WriteString("\t(latest)")
+			} else {
+				tw.WriteString("\t(out of date)")
 			}
+		} else {
+			tw.WriteString("\t(no data)")
 		}
-		return tw.Flush()
-	})
+		tw.WriteByte('\n')
+	}
 
-	group.Go(func() error {
-		defer close(lines)
-
-		cfnClient := cloudformation.NewFromConfig(awsConfig)
-		group, ctx := errgroup.WithContext(ctx)
-		group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
-
-		for _, stack := range rootConfig.Stacks {
-			name := stack.Name
-			group.Go(func() error {
-				key, err := getStackS3Key(ctx, cfnClient, name)
-
-				line := name
-				switch {
-				case err == nil:
-					line += "\t" + key
-					if key == latestPackage {
-						line += "\t(latest)"
-					} else {
-						line += "\t(out of date)"
-					}
-
-				case err != nil:
-					line += "\t(no data)"
-				}
-
-				lines <- line + "\n"
-				return nil
-			})
-		}
-
-		return group.Wait()
-	})
-
-	if err := group.Wait(); err != nil {
+	if err := tw.Flush(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+type tabWriter struct {
+	*tabwriter.Writer
+	err error
+}
+
+func (b *tabWriter) Write(buf []byte) (n int, err error) {
+	if b.err != nil {
+		return 0, b.err
+	}
+	n, b.err = b.Writer.Write(buf)
+	return n, b.err
+}
+
+func (b *tabWriter) WriteString(s string) error {
+	_, err := b.Write([]byte(s))
+	return err
+}
+
+func (b *tabWriter) WriteByte(x byte) error {
+	_, err := b.Write([]byte{x})
+	return err
+}
+
+func (b *tabWriter) Flush() error {
+	if b.err != nil {
+		return b.err
+	}
+	return b.Writer.Flush()
 }
