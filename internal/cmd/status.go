@@ -49,11 +49,11 @@ func runStatus(cmd *cobra.Command, args []string) {
 	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
 	stackS3Keys := make([]string, len(rootConfig.Stacks))
 	for i, stack := range rootConfig.Stacks {
-		i, name := i, stack.Name
+		i, stack := i, stack
 		group.Go(func() error {
 			// Errors here are intentionally not hard failures. One misconfigured or
 			// not-yet-deployed stack should not prevent reporting for other stacks.
-			if key, err := getStackS3Key(context.Background(), cfnClient, name); err == nil {
+			if key, err := getStackS3Key(context.Background(), cfnClient, stack.Name); err == nil {
 				stackS3Keys[i] = key
 			}
 			return nil
