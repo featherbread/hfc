@@ -18,10 +18,11 @@ import (
 )
 
 var deployCmd = &cobra.Command{
-	Use:   "deploy [flags] stack [parameters]",
-	Short: "Deploy a CloudFormation stack using the latest uploaded binary",
-	Args:  cobra.MinimumNArgs(1),
-	Run:   runDeploy,
+	Use:    "deploy [flags] stack [parameters]",
+	Short:  "Deploy a CloudFormation stack using the latest uploaded binary",
+	Args:   cobra.MinimumNArgs(1),
+	PreRun: initializePreRun,
+	Run:    runDeploy,
 }
 
 func init() {

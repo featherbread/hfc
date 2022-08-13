@@ -31,7 +31,8 @@ objects from the bucket.
 The command prints the keys of objects to be deleted and requests confirmation
 before proceeding.
 `,
-	Run: runCleanUploads,
+	PreRun: initializePreRun,
+	Run:    runCleanUploads,
 }
 
 func init() {

@@ -32,32 +32,33 @@ var rootCmd = &cobra.Command{
 	Use:     "hfc",
 	Short:   "Build and deploy serverless Go apps with AWS Lambda and CloudFormation",
 	Version: getMainVersion(),
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		log.SetPrefix("[hfc] ")
-		log.SetFlags(0)
-		shelley.DefaultContext.DebugLogger = log.New(log.Writer(), "[hfc] $ ", 0)
+}
 
-		configPath, err := config.FindPath()
-		if err != nil {
-			log.Fatal(err)
-		}
-		rootConfig, err = config.Load()
-		if err != nil {
-			log.Fatal(err)
-		}
-		rootState, err = state.Get(configPath)
-		if err != nil {
-			log.Fatal(err)
-		}
+func initializePreRun(cmd *cobra.Command, args []string) {
+	log.SetPrefix("[hfc] ")
+	log.SetFlags(0)
+	shelley.DefaultContext.DebugLogger = log.New(log.Writer(), "[hfc] $ ", 0)
 
-		awsConfig, err = awsconfig.LoadDefaultConfig(
-			context.Background(),
-			awsconfig.WithRegion(rootConfig.AWS.Region),
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-	},
+	configPath, err := config.FindPath()
+	if err != nil {
+		log.Fatal(err)
+	}
+	rootConfig, err = config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+	rootState, err = state.Get(configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	awsConfig, err = awsconfig.LoadDefaultConfig(
+		context.Background(),
+		awsconfig.WithRegion(rootConfig.AWS.Region),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func getMainVersion() string {

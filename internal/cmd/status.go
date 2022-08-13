@@ -16,9 +16,10 @@ import (
 )
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Summarize the current deployment status of all stacks",
-	Run:   runStatus,
+	Use:    "status",
+	Short:  "Summarize the current deployment status of all stacks",
+	PreRun: initializePreRun,
+	Run:    runStatus,
 }
 
 func init() {

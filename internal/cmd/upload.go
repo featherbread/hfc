@@ -20,9 +20,10 @@ import (
 )
 
 var uploadCmd = &cobra.Command{
-	Use:   "upload",
-	Short: "Upload the latest binary to the container registry",
-	Run:   runUpload,
+	Use:    "upload",
+	Short:  "Upload the latest binary to the container registry",
+	PreRun: initializePreRun,
+	Run:    runUpload,
 }
 
 func init() {
