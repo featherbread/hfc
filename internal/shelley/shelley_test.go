@@ -1,7 +1,6 @@
 package shelley
 
 import (
-	"bytes"
 	"errors"
 	"log"
 	"os"
@@ -27,7 +26,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRunWithoutOptions(t *testing.T) {
-	var stdout, stderr bytes.Buffer
+	var stdout, stderr strings.Builder
 	context := &Context{
 		Stdin:  strings.NewReader("stdin\n"),
 		Stdout: &stdout,
@@ -59,7 +58,7 @@ func TestExitError(t *testing.T) {
 }
 
 func TestDebug(t *testing.T) {
-	var stdout, debug bytes.Buffer
+	var stdout, debug strings.Builder
 	context := &Context{
 		Stdin:       strings.NewReader("one\ntwo\nthree\n"),
 		Stdout:      &stdout,
@@ -83,7 +82,7 @@ func TestDebug(t *testing.T) {
 }
 
 func TestEnv(t *testing.T) {
-	var stdout bytes.Buffer
+	var stdout strings.Builder
 	context := &Context{Stdout: &stdout}
 
 	err := context.Command("sh", "-c", `echo "$SHELLEY"`).Env("SHELLEY", "shelley").Run()
