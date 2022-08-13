@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"runtime/debug"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -60,11 +61,49 @@ var rootCmd = &cobra.Command{
 }
 
 func getMainVersion() string {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		v := info.Main.Version
-		if v != "(devel)" {
-			return v
+	const unknown = "v0.0.0-unknown"
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return unknown
+	}
+
+	// Use the module version if it's a real version. This is the case when
+	// building using the module@version syntax, rather than from a local
+	// checkout.
+	if v := info.Main.Version; v != "(devel)" {
+		return v
+	}
+
+	// For local checkouts, try to synthesize a pseudo-version from VCS metadata,
+	// because that's just how much I like having this info at a glance. This
+	// isn't bulletproof, but should work in most reasonable build scenarios.
+	var vcstime, revision, modified string
+	for _, s := range info.Settings {
+		switch s.Key {
+		case "vcs.time":
+			vcstime = strings.Map(digitsOnly, s.Value)
+		case "vcs.revision":
+			revision = s.Value
+			if len(revision) > 12 {
+				revision = revision[:12]
+			}
+		case "vcs.modified":
+			if s.Value == "true" {
+				modified = "+modified"
+			}
 		}
 	}
-	return "v0.0.0-unknown"
+	if vcstime != "" && revision != "" {
+		return "v0.0.0-" + vcstime + "-" + revision + modified
+	}
+
+	return unknown
+}
+
+func digitsOnly(r rune) rune {
+	if r >= '0' && r <= '9' {
+		return r
+	}
+	return -1
 }
