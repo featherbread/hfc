@@ -32,8 +32,6 @@ type ProjectConfig struct {
 // AWSConfig represents the configuration for all AWS operations in this
 // project.
 type AWSConfig struct {
-	// TODO: Consider allowing per-stack region overrides, even though I don't
-	// personally have a use case for that feature.
 	Region string `toml:"region"`
 }
 
