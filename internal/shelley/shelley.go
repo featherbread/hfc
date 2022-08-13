@@ -96,12 +96,15 @@ func (c *Cmd) Env(name, value string) *Cmd {
 // Run runs the command and waits for it to complete.
 func (c *Cmd) Run() error {
 	if c.context.DebugLogger != nil {
-		var envString string
+		var envString strings.Builder
 		for _, env := range c.envs {
 			split := strings.SplitN(env, "=", 2)
-			envString += split[0] + "=" + shellquote.Join(split[1]) + " "
+			envString.WriteString(split[0])
+			envString.WriteRune('=')
+			envString.WriteString(shellquote.Join(split[1]))
+			envString.WriteRune(' ')
 		}
-		c.context.DebugLogger.Print(envString + shellquote.Join(c.args...))
+		c.context.DebugLogger.Print(envString.String() + shellquote.Join(c.args...))
 	}
 
 	c.cmd = exec.Command(c.args[0], c.args[1:]...)
