@@ -22,17 +22,17 @@ func Execute() {
 	}
 }
 
-var (
-	rootConfig config.Config
-	rootState  state.State
-	awsConfig  aws.Config
-)
-
 var rootCmd = &cobra.Command{
 	Use:     "hfc",
 	Short:   "Build and deploy serverless Go apps with AWS Lambda and CloudFormation",
 	Version: getMainVersion(),
 }
+
+var (
+	rootConfig config.Config
+	rootState  state.State
+	awsConfig  aws.Config
+)
 
 func initializePreRun(cmd *cobra.Command, args []string) {
 	log.SetPrefix("[hfc] ")
@@ -59,6 +59,25 @@ func initializePreRun(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func completeStackNames(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveDefault
+	}
+
+	rootConfig, err := config.Load()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	names := make([]string, 0, len(rootConfig.Stacks))
+	for _, stack := range rootConfig.Stacks {
+		if strings.HasPrefix(stack.Name, toComplete) {
+			names = append(names, stack.Name)
+		}
+	}
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func getMainVersion() string {
