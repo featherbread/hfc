@@ -28,15 +28,15 @@ func init() {
 
 func runStatus(cmd *cobra.Command, args []string) {
 	latestPackageRaw, err := os.ReadFile(rootState.LatestLambdaPackagePath())
-	latestPackage := strings.TrimSpace(string(latestPackageRaw))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		fmt.Printf("CURRENT BUILD: (no current build)\n\n")
 	case err != nil:
 		log.Fatal(err)
-	default:
-		fmt.Printf("CURRENT BUILD: %s\n\n", latestPackage)
 	}
+
+	latestPackage := strings.TrimSpace(string(latestPackageRaw))
+	fmt.Printf("CURRENT BUILD: %s\n\n", latestPackage)
 
 	fmt.Printf("DEPLOYED VERSIONS:\n")
 

@@ -89,27 +89,27 @@ func runDeploy(cmd *cobra.Command, args []string) {
 
 func getDeploymentParameters() ([]string, error) {
 	latestPackageRaw, err := os.ReadFile(rootState.LatestLambdaPackagePath())
-	latestPackage := strings.TrimSpace(string(latestPackageRaw))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, errors.New("must upload a deployment package before deploying")
 	case err != nil:
 		return nil, err
-	default:
-		return []string{
-			"CodeS3Bucket=" + rootConfig.Upload.Bucket,
-			"CodeS3Key=" + latestPackage,
-		}, nil
 	}
+
+	latestPackage := strings.TrimSpace(string(latestPackageRaw))
+	return []string{
+		"CodeS3Bucket=" + rootConfig.Upload.Bucket,
+		"CodeS3Key=" + latestPackage,
+	}, nil
 }
 
 func concat(slices ...[]string) []string {
-	var total int
+	var totalLen int
 	for _, slice := range slices {
-		total += len(slice)
+		totalLen += len(slice)
 	}
 
-	result := make([]string, 0, total)
+	result := make([]string, 0, totalLen)
 	for _, slice := range slices {
 		result = append(result, slice...)
 	}

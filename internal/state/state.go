@@ -36,8 +36,8 @@ func Get(configPath string) (State, error) {
 	return State{path: statePath}, nil
 }
 
-// OutputPath returns the relative file path to the named Go binary in the state
-// directory.
+// BinaryPath returns the relative file path to the named Go binary in the
+// state directory.
 func (s State) BinaryPath(name string) (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
