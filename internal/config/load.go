@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"dario.cat/mergo"
 	"github.com/BurntSushi/toml"
-	"github.com/imdario/mergo"
 )
 
 const (
