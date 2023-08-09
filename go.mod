@@ -1,6 +1,6 @@
 module go.alexhamlin.co/hfc
 
-go 1.18
+go 1.21
 
 require (
 	dario.cat/mergo v1.0.0
@@ -13,7 +13,6 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/spf13/cobra v1.7.0
-	golang.org/x/exp v0.0.0-20230807204917-050eac23e9de
 	golang.org/x/sync v0.3.0
 )
 

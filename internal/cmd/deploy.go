@@ -6,13 +6,12 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/spf13/cobra"
-	"golang.org/x/exp/slices"
 
 	"go.alexhamlin.co/hfc/internal/shelley"
 )
@@ -56,7 +55,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	for key, value := range stack.Parameters {
 		overrideParameters = append(overrideParameters, key+"="+value)
 	}
-	sort.Strings(overrideParameters)
+	slices.Sort(overrideParameters)
 
 	deployArgs := concat(
 		[]string{"aws", "cloudformation", "deploy"},

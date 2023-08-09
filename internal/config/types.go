@@ -1,6 +1,6 @@
 package config
 
-import "golang.org/x/exp/slices"
+import "slices"
 
 // Config represents a full configuration.
 type Config struct {

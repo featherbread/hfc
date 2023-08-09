@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
+	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -71,8 +71,8 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 		keepKeys   = candidateKeys.Intersect(stackKeys).ToSlice()
 		deleteKeys = candidateKeys.Difference(stackKeys).ToSlice()
 	)
-	sort.Strings(keepKeys)
-	sort.Strings(deleteKeys)
+	slices.Sort(keepKeys)
+	slices.Sort(deleteKeys)
 
 	if len(deleteKeys) == 0 {
 		log.Print("Bucket is clean enough, no objects to delete.")
