@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
 	"go.alexhamlin.co/hfc/internal/config"
@@ -71,12 +72,10 @@ func completeStackNames(cmd *cobra.Command, args []string, toComplete string) ([
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	names := make([]string, 0, len(rootConfig.Stacks))
-	for _, stack := range rootConfig.Stacks {
-		if strings.HasPrefix(stack.Name, toComplete) {
-			names = append(names, stack.Name)
-		}
-	}
+	names := lo.FilterMap(rootConfig.Stacks,
+		func(stack config.StackConfig, _ int) (name string, ok bool) {
+			return stack.Name, strings.HasPrefix(stack.Name, toComplete)
+		})
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
