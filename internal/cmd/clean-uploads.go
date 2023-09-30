@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -44,13 +43,13 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 	s3Client := s3.NewFromConfig(awsConfig)
 
 	var (
-		candidateS3Keys []string
-		stackS3Keys     = make([]string, len(rootConfig.Stacks))
+		bucketS3Keys []string
+		stackS3Keys  = make([]string, len(rootConfig.Stacks))
 	)
 	group, ctx := errgroup.WithContext(context.Background())
 	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
 	group.Go(func() (err error) {
-		candidateS3Keys, err = getUploadedS3Keys(ctx, s3Client)
+		bucketS3Keys, err = getUploadedS3Keys(ctx, s3Client)
 		return
 	})
 	for i, stack := range rootConfig.Stacks {
@@ -64,18 +63,16 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	candidateS3Keys = lo.Uniq(candidateS3Keys)
+	bucketS3Keys = lo.Uniq(bucketS3Keys)
 	stackS3Keys = lo.Uniq(stackS3Keys)
 
-	keepKeys := lo.Intersect(candidateS3Keys, stackS3Keys)
-	deleteKeys, _ := lo.Difference(candidateS3Keys, stackS3Keys)
+	keepKeys := lo.Intersect(bucketS3Keys, stackS3Keys)
+	deleteKeys, _ := lo.Difference(bucketS3Keys, stackS3Keys)
+
 	if len(deleteKeys) == 0 {
 		log.Print("Bucket is clean enough, no objects to delete.")
 		return
 	}
-
-	slices.Sort(keepKeys)
-	slices.Sort(deleteKeys)
 
 	if len(keepKeys) > 0 {
 		log.Print("Will keep the following in-use objects:\n\n")
