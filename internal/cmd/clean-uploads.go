@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
@@ -64,20 +64,18 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	var (
-		candidateKeys = mapset.NewThreadUnsafeSet(candidateS3Keys...)
-		stackKeys     = mapset.NewThreadUnsafeSet(stackS3Keys...)
+	candidateS3Keys = lo.Uniq(candidateS3Keys)
+	stackS3Keys = lo.Uniq(stackS3Keys)
 
-		keepKeys   = candidateKeys.Intersect(stackKeys).ToSlice()
-		deleteKeys = candidateKeys.Difference(stackKeys).ToSlice()
-	)
-	slices.Sort(keepKeys)
-	slices.Sort(deleteKeys)
-
+	keepKeys := lo.Intersect(candidateS3Keys, stackS3Keys)
+	deleteKeys, _ := lo.Difference(candidateS3Keys, stackS3Keys)
 	if len(deleteKeys) == 0 {
 		log.Print("Bucket is clean enough, no objects to delete.")
 		return
 	}
+
+	slices.Sort(keepKeys)
+	slices.Sort(deleteKeys)
 
 	if len(keepKeys) > 0 {
 		log.Print("Will keep the following in-use objects:\n\n")
