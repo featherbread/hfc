@@ -14,6 +14,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/samber/lo v1.38.1
 	github.com/spf13/cobra v1.7.0
+	github.com/thoas/go-funk v0.9.3
 	golang.org/x/sync v0.3.0
 )
 

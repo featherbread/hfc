@@ -11,6 +11,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+	"github.com/thoas/go-funk"
 
 	"go.alexhamlin.co/hfc/internal/config"
 	"go.alexhamlin.co/hfc/internal/shelley"
@@ -72,10 +73,9 @@ func completeStackNames(cmd *cobra.Command, args []string, toComplete string) ([
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	filterMapNames := func(stack config.StackConfig, _ int) (string, bool) {
-		return stack.Name, strings.HasPrefix(stack.Name, toComplete)
-	}
-	return lo.FilterMap(rootConfig.Stacks, filterMapNames), cobra.ShellCompDirectiveNoFileComp
+	names := funk.Keys(funk.ToMap(rootConfig.Stacks, "Name")).([]string)
+	names = lo.Filter(names, func(n string, _ int) bool { return strings.HasPrefix(n, toComplete) })
+	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
 func getMainVersion() string {
