@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"github.com/thoas/go-funk"
 
@@ -74,7 +73,7 @@ func completeStackNames(cmd *cobra.Command, args []string, toComplete string) ([
 	}
 
 	names := funk.Keys(funk.ToMap(rootConfig.Stacks, "Name")).([]string)
-	names = lo.Filter(names, func(n string, _ int) bool { return strings.HasPrefix(n, toComplete) })
+	names = funk.FilterString(names, func(n string) bool { return strings.HasPrefix(n, toComplete) })
 	return names, cobra.ShellCompDirectiveNoFileComp
 }
 
