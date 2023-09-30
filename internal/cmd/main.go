@@ -72,9 +72,12 @@ func completeStackNames(cmd *cobra.Command, args []string, toComplete string) ([
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	names := lo.Map(rootConfig.Stacks, func(s config.StackConfig, _ int) string { return s.Name })
-	names = lo.Filter(names, func(n string, _ int) bool { return strings.HasPrefix(n, toComplete) })
-	return names, cobra.ShellCompDirectiveNoFileComp
+	filterMapStackNames := func(stack config.StackConfig, _ int) (name string, ok bool) {
+		name = stack.Name
+		ok = strings.HasPrefix(name, toComplete)
+		return
+	}
+	return lo.FilterMap(rootConfig.Stacks, filterMapStackNames), cobra.ShellCompDirectiveNoFileComp
 }
 
 func getMainVersion() string {
