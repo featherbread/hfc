@@ -55,6 +55,7 @@ func (s State) LatestLambdaPackagePath() string {
 
 // Path returns the absolute file path formed by joining the provided path
 // elements to the state directory path.
-func (s State) Path(elem ...string) string {
-	return filepath.Join(append([]string{s.path}, elem...)...)
+func (s State) Path(parts ...string) string {
+	allParts := append([]string{s.path}, parts...)
+	return filepath.Join(allParts...)
 }

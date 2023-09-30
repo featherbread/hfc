@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
 	"go.alexhamlin.co/hfc/internal/shelley"
@@ -36,40 +37,37 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		log.Fatalf("stack %s is not configured", stackName)
 	}
 
-	var regionArgs []string
-	if rootConfig.AWS.Region != "" {
-		regionArgs = []string{"--region", rootConfig.AWS.Region}
-	}
-
-	var capabilityArgs []string
-	if len(rootConfig.Template.Capabilities) > 0 {
-		capabilityArgs = append([]string{"--capabilities"}, rootConfig.Template.Capabilities...)
-	}
-
-	deploymentParameters, err := getDeploymentParameters()
+	lambdaParameters, err := getLambdaPackageParameters()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	overrideParameters := slices.Clone(args[1:])
-	for key, value := range stack.Parameters {
-		overrideParameters = append(overrideParameters, key+"="+value)
-	}
-	slices.Sort(overrideParameters)
+	cliParameters := slices.Clone(args[1:])
+	allParameters := lo.Flatten([][]string{
+		lambdaParameters,
+		cliParameters,
+		lo.MapToSlice(stack.Parameters, func(k, v string) string { return k + "=" + v }),
+	})
+	slices.Sort(allParameters)
 
-	deployArgs := concat(
-		[]string{"aws", "cloudformation", "deploy"},
-		regionArgs,
-		[]string{
+	deployArgs := lo.Flatten([][]string{
+		{"aws", "cloudformation", "deploy"},
+		lo.Ternary(
+			rootConfig.AWS.Region == "", nil,
+			[]string{"--region", rootConfig.AWS.Region},
+		),
+		{
 			"--template-file", rootConfig.Template.Path,
 			"--stack-name", stackName,
 			"--no-fail-on-empty-changeset",
 		},
-		capabilityArgs,
-		[]string{"--parameter-overrides"},
-		deploymentParameters,
-		overrideParameters,
-	)
+		lo.Ternary(
+			len(rootConfig.Template.Capabilities) == 0, nil,
+			lo.Flatten([][]string{{"--capabilities"}, rootConfig.Template.Capabilities}),
+		),
+		{"--parameter-overrides"},
+		allParameters,
+	})
 	shelley.ExitIfError(shelley.Command(deployArgs...).Run())
 
 	cfnClient := cloudformation.NewFromConfig(awsConfig)
@@ -86,7 +84,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	}
 }
 
-func getDeploymentParameters() ([]string, error) {
+func getLambdaPackageParameters() ([]string, error) {
 	latestPackageRaw, err := os.ReadFile(rootState.LatestLambdaPackagePath())
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
@@ -100,17 +98,4 @@ func getDeploymentParameters() ([]string, error) {
 		"CodeS3Bucket=" + rootConfig.Upload.Bucket,
 		"CodeS3Key=" + latestPackage,
 	}, nil
-}
-
-func concat(slices ...[]string) []string {
-	var totalLen int
-	for _, slice := range slices {
-		totalLen += len(slice)
-	}
-
-	result := make([]string, 0, totalLen)
-	for _, slice := range slices {
-		result = append(result, slice...)
-	}
-	return result
 }

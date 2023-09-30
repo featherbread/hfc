@@ -9,9 +9,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.18.39
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.34.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.38.5
-	github.com/deckarep/golang-set/v2 v2.3.1
 	github.com/google/go-cmp v0.5.9
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
+	github.com/samber/lo v1.38.1
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/sync v0.3.0
 )
@@ -35,4 +35,5 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 )

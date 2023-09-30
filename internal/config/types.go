@@ -1,6 +1,6 @@
 package config
 
-import "slices"
+import "github.com/samber/lo"
 
 // Config represents a full configuration.
 type Config struct {
@@ -15,12 +15,7 @@ type Config struct {
 // FindStack searches for the stack with the given name. If no stack is defined
 // with the provided name, FindStack returns ok == false.
 func (c *Config) FindStack(name string) (stack StackConfig, ok bool) {
-	i := slices.IndexFunc(c.Stacks, func(s StackConfig) bool { return s.Name == name })
-	if i < 0 {
-		return StackConfig{}, false
-	}
-	return c.Stacks[i], true
-
+	return lo.Find(c.Stacks, func(s StackConfig) bool { return s.Name == name })
 }
 
 // ProjectConfig represents the configuration for this project, which is
