@@ -55,7 +55,7 @@ func runUpload(cmd *cobra.Command, args []string) {
 		Bucket:         aws.String(bucket),
 		Key:            aws.String(key),
 		Body:           bytes.NewReader(lambdaPackage),
-		ContentLength:  int64(len(lambdaPackage)),
+		ContentLength:  aws.Int64(int64(len(lambdaPackage))),
 		ChecksumSHA256: aws.String(hashString),
 	})
 	if err != nil {

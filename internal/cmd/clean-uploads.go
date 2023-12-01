@@ -101,7 +101,7 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 		Bucket: aws.String(rootConfig.Upload.Bucket),
 		Delete: &types.Delete{
 			Objects: deleteIdentifiers,
-			Quiet:   true,
+			Quiet:   aws.Bool(true),
 		},
 	})
 	if err != nil {
