@@ -41,23 +41,23 @@ func init() {
 func runCleanUploads(cmd *cobra.Command, args []string) {
 	cfnClient := cloudformation.NewFromConfig(awsConfig)
 	s3Client := s3.NewFromConfig(awsConfig)
-
-	var (
-		bucketS3Keys []string
-		stackS3Keys  = make([]string, len(rootConfig.Stacks))
-	)
 	group, ctx := errgroup.WithContext(context.Background())
 	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
+
+	var bucketS3Keys []string
 	group.Go(func() (err error) {
 		bucketS3Keys, err = getUploadedS3Keys(ctx, s3Client)
 		return
 	})
+
+	stackS3Keys := make([]string, len(rootConfig.Stacks))
 	for i, stack := range rootConfig.Stacks {
 		group.Go(func() (err error) {
 			stackS3Keys[i], err = getStackS3Key(ctx, cfnClient, stack.Name)
 			return
 		})
 	}
+
 	if err := group.Wait(); err != nil {
 		log.Fatal(err)
 	}
@@ -90,9 +90,7 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 
 	deleteIdentifiers := make([]types.ObjectIdentifier, len(deleteKeys))
 	for i, key := range deleteKeys {
-		deleteIdentifiers[i] = types.ObjectIdentifier{
-			Key: &key,
-		}
+		deleteIdentifiers[i] = types.ObjectIdentifier{Key: &key}
 	}
 	output, err := s3Client.DeleteObjects(context.Background(), &s3.DeleteObjectsInput{
 		Bucket: aws.String(rootConfig.Upload.Bucket),
