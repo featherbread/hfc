@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 )
 
 func TestLoad(t *testing.T) {
@@ -49,18 +50,7 @@ func TestLoad(t *testing.T) {
 }
 
 func switchDir(dir string) (switchBack func()) {
-	original, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	if err := os.Chdir(filepath.Join(original, dir)); err != nil {
-		panic(err)
-	}
-
-	return func() {
-		if err := os.Chdir(original); err != nil {
-			panic(err)
-		}
-	}
+	original := lo.Must(os.Getwd())
+	lo.Must0(os.Chdir(filepath.Join(original, dir)))
+	return func() { lo.Must0(os.Chdir(original)) }
 }
