@@ -7,6 +7,7 @@ import (
 
 	"dario.cat/mergo"
 	"github.com/BurntSushi/toml"
+	"github.com/samber/lo"
 )
 
 const (
@@ -84,10 +85,9 @@ func LoadFile(path string) (Config, error) {
 func Merge(configs ...Config) Config {
 	var result Config
 	for _, config := range configs {
-		err := mergo.Merge(&result, config, mergo.WithOverride, mergo.WithAppendSlice)
-		if err != nil {
-			panic(err)
-		}
+		lo.Must0(
+			mergo.Merge(&result, config, mergo.WithOverride, mergo.WithAppendSlice),
+		)
 	}
 	return result
 }
