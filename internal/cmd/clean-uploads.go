@@ -53,7 +53,6 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 		return
 	})
 	for i, stack := range rootConfig.Stacks {
-		i, stack := i, stack
 		group.Go(func() (err error) {
 			stackS3Keys[i], err = getStackS3Key(ctx, cfnClient, stack.Name)
 			return
