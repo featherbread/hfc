@@ -92,9 +92,7 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 	deleteIdentifiers := make([]types.ObjectIdentifier, len(deleteKeys))
 	for i, key := range deleteKeys {
 		deleteIdentifiers[i] = types.ObjectIdentifier{
-			// Reminder: &key will create pain and sadness here.
-			// https://github.com/golang/go/wiki/CommonMistakes#using-reference-to-loop-iterator-variable
-			Key: aws.String(key),
+			Key: &key,
 		}
 	}
 	output, err := s3Client.DeleteObjects(context.Background(), &s3.DeleteObjectsInput{
