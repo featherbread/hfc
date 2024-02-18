@@ -17,7 +17,7 @@ import (
 
 var statusCmd = &cobra.Command{
 	Use:    "status",
-	Short:  "Summarize the current deployment status of all stacks",
+	Short:  "Summarize the deployment status of all stacks",
 	PreRun: initializePreRun,
 	Run:    runStatus,
 }

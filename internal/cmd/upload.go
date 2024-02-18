@@ -21,7 +21,7 @@ import (
 
 var uploadCmd = &cobra.Command{
 	Use:    "upload",
-	Short:  "Upload the latest binary to the container registry",
+	Short:  "Upload a Lambda deployment package for the latest build",
 	PreRun: initializePreRun,
 	Run:    runUpload,
 }

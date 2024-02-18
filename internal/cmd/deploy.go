@@ -19,7 +19,7 @@ import (
 
 var deployCmd = &cobra.Command{
 	Use:               "deploy [flags] stack [parameters]",
-	Short:             "Deploy a CloudFormation stack using the latest uploaded binary",
+	Short:             "Deploy the CloudFormation stack with the latest upload",
 	Args:              cobra.MinimumNArgs(1),
 	ValidArgsFunction: completeStackNames,
 	PreRun:            initializePreRun,

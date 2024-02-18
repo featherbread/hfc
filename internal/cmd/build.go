@@ -13,7 +13,7 @@ import (
 
 var buildCmd = &cobra.Command{
 	Use:    "build",
-	Short:  "Build the Go binary for deployment",
+	Short:  "Build the Go binary for Lambda",
 	PreRun: initializePreRun,
 	Run:    runBuild,
 }
