@@ -1,4 +1,4 @@
-module go.alexhamlin.co/hfc
+module github.com/ahamlinman/hfc
 
 go 1.22
 

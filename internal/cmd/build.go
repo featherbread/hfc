@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"go.alexhamlin.co/hfc/internal/shelley"
+	"github.com/ahamlinman/hfc/internal/shelley"
 )
 
 var buildCmd = &cobra.Command{

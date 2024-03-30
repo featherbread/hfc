@@ -2,7 +2,7 @@
 // Lambda and CloudFormation.
 package main
 
-import "go.alexhamlin.co/hfc/internal/cmd"
+import "github.com/ahamlinman/hfc/internal/cmd"
 
 func main() {
 	cmd.Execute()

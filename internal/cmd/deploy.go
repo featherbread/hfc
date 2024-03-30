@@ -14,7 +14,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
-	"go.alexhamlin.co/hfc/internal/shelley"
+	"github.com/ahamlinman/hfc/internal/shelley"
 )
 
 var deployCmd = &cobra.Command{
