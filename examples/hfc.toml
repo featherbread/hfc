@@ -1,26 +1,19 @@
 # This is an example project-level configuration, which defines settings that
-# we expect to apply to all deployments of the CloudFormation template.
+# apply to all deployments of the CloudFormation template.
 
 [project]
-name = "importbounce"
+name = "randomizer"
 
-# In this example, the CloudFormation stack creates TLS certificates for a
-# CloudFront deployment using AWS Certificate Manager, which requires that the
-# stack be deployed to the us-east-1 region.
-[aws]
-region = "us-east-1"
+# A region is useful in the global config for stacks whose resources can only
+# exist there, e.g. TLS certificates for CloudFront must be in us-east-1.
+# Otherwise, hfc defaults to standard AWS SDK behavior.
+#
+# [aws]
+# region = "us-east-1"
 
 [build]
-path = "./cmd/importbounce"
+path = "./cmd/randomizer"
 
 [template]
 path = "CloudFormation.yaml"
 capabilities = ["CAPABILITY_IAM"]
-
-[[template.outputs]]
-help = "Upload your importbounce configuration to:"
-key = "ConfigS3URI"
-
-[[template.outputs]]
-help = "Point your CNAME to:"
-key = "ApiDomain"

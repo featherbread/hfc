@@ -1,13 +1,13 @@
 # This is an example local configuration, which defines settings for one
-# individual's specific deployments of the CloudFormation template.
+# individual's deployments of the CloudFormation template.
 
 [upload]
-bucket = "importbounce-lambda-XXXXXX"
+bucket = "randomizer-lambda-XXXXXX"
 
 [[stacks]]
-name = "ImportBounceTest"
-parameters = { DomainName = "go-test.alexhamlin.co" }
+name = "RandomizerStaging"
+parameters = { SlackTokenSSMName = "RandomizerStaging/SlackToken" }
 
 [[stacks]]
-name = "ImportBouncePersonal"
-parameters = { DomainName = "go.alexhamlin.co" }
+name = "RandomizerProduction"
+parameters = { SlackTokenSSMName = "RandomizerProduction/SlackToken" }
