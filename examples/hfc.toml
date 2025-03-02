@@ -13,6 +13,7 @@ name = "randomizer"
 
 [build]
 path = "./cmd/randomizer"
+tags = ["grpcnotrace"]
 
 [template]
 path = "CloudFormation.yaml"

@@ -32,7 +32,8 @@ type AWSConfig struct {
 
 // BuildConfig represents the configuration for building a deployable Go binary.
 type BuildConfig struct {
-	Path string `toml:"path"`
+	Path string   `toml:"path"`
+	Tags []string `toml:"tags"`
 }
 
 // UploadConfig represents the configuration for uploading a Go binary in a

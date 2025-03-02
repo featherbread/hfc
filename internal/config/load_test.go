@@ -19,6 +19,7 @@ func TestLoad(t *testing.T) {
 		},
 		Build: BuildConfig{
 			Path: "./cmd/hfc",
+			Tags: []string{"grpcnotrace"},
 		},
 		Upload: UploadConfig{
 			Bucket: "hfc",

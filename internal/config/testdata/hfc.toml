@@ -3,6 +3,7 @@ name = "hfc"
 
 [build]
 path = "./cmd/hfc"
+tags = ["grpcnotrace"]
 
 [upload]
 bucket = "hfc"

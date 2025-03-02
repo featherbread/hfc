@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -36,11 +37,18 @@ func runBuild(cmd *cobra.Command, args []string) {
 		log.Fatal("creating output directory: ", err)
 	}
 
+	var tags strings.Builder
+	tags.WriteString("lambda.norpc")
+	for _, tag := range rootConfig.Build.Tags {
+		tags.WriteRune(',')
+		tags.WriteString(tag)
+	}
+
 	shelley.ExitIfError(shelley.
 		Command(
 			"go", "build", "-v",
 			"-ldflags", "-s -w",
-			"-tags", "lambda.norpc",
+			"-tags", tags.String(),
 			"-o", outputPath,
 			rootConfig.Build.Path,
 		).
