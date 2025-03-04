@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -27,21 +26,38 @@ func init() {
 }
 
 func runStatus(cmd *cobra.Command, args []string) {
+	const (
+		minwidth = 1
+		tabwidth = 8
+		padding  = 2
+		padchar  = ' '
+		flags    = 0
+	)
+	tw := tabWriter{
+		Writer: tabwriter.NewWriter(os.Stdout, minwidth, tabwidth, padding, padchar, flags),
+	}
+	defer func() {
+		if err := tw.Flush(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	latestPackageRaw, err := os.ReadFile(rootState.LatestLambdaPackagePath())
+	latestPackage := strings.TrimSpace(string(latestPackageRaw))
 	switch {
+	default:
+		tw.WriteColumn("(build)")
+		tw.WriteColumn(latestPackage)
+		tw.EndLine()
 	case errors.Is(err, fs.ErrNotExist):
-		fmt.Printf("CURRENT BUILD: (no current build)\n\n")
+		tw.WriteColumn("(build)")
+		tw.WriteColumn("(none)")
+		tw.EndLine()
 	case err != nil:
 		log.Fatal(err)
 	}
 
-	latestPackage := strings.TrimSpace(string(latestPackageRaw))
-	fmt.Printf("CURRENT BUILD: %s\n\n", latestPackage)
-
-	fmt.Printf("DEPLOYED VERSIONS:\n")
-
 	if len(rootConfig.Stacks) == 0 {
-		fmt.Println("(no stacks configured)")
 		return
 	}
 
@@ -61,23 +77,12 @@ func runStatus(cmd *cobra.Command, args []string) {
 	}
 	group.Wait()
 
-	const (
-		minwidth = 1
-		tabwidth = 8
-		padding  = 2
-		padchar  = ' '
-		flags    = 0
-	)
-	tw := tabWriter{
-		Writer: tabwriter.NewWriter(os.Stdout, minwidth, tabwidth, padding, padchar, flags),
-	}
-
 	for i, stack := range rootConfig.Stacks {
 		tw.WriteColumn(stack.Name)
 
 		key := stackS3Keys[i]
 		if key == "" {
-			tw.WriteColumn("(no data)")
+			tw.WriteColumn("(unknown)")
 			tw.EndLine()
 			continue
 		}
@@ -86,13 +91,9 @@ func runStatus(cmd *cobra.Command, args []string) {
 		if key == latestPackage {
 			tw.WriteColumn("(current)")
 		} else {
-			tw.WriteColumn("(not current)")
+			tw.WriteColumn("(not-current)")
 		}
 		tw.EndLine()
-	}
-
-	if err := tw.Flush(); err != nil {
-		log.Fatal(err)
 	}
 }
 
