@@ -1,12 +1,9 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/samber/lo"
 )
 
 func TestLoad(t *testing.T) {
@@ -37,8 +34,7 @@ func TestLoad(t *testing.T) {
 		}},
 	}
 
-	switchBack := switchDir("testdata")
-	defer switchBack()
+	t.Chdir("testdata")
 
 	got, err := Load()
 	if err != nil {
@@ -48,10 +44,4 @@ func TestLoad(t *testing.T) {
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("unexpected result (-want +got):\n%s", diff)
 	}
-}
-
-func switchDir(dir string) (switchBack func()) {
-	original := lo.Must(os.Getwd())
-	lo.Must0(os.Chdir(filepath.Join(original, dir)))
-	return func() { lo.Must0(os.Chdir(original)) }
 }
