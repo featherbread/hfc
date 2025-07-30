@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"io/fs"
 	"log"
@@ -9,8 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
@@ -70,18 +67,7 @@ func runDeploy(cmd *cobra.Command, args []string) {
 	})
 	shelley.ExitIfError(shelley.Command(deployArgs...).Run())
 
-	cfnClient := cloudformation.NewFromConfig(awsConfig)
-	description, err := cfnClient.DescribeStacks(context.Background(), &cloudformation.DescribeStacksInput{
-		StackName: aws.String(stackName),
-	})
-	if err != nil {
-		log.Print("unable to read stack info, will skip printing output")
-		return
-	}
-
-	for _, output := range description.Stacks[0].Outputs {
-		log.Printf("%s (%s):\n\t%s", *output.Description, *output.OutputKey, *output.OutputValue)
-	}
+	runOutputs(cmd, args)
 }
 
 func getLambdaPackageParameters() ([]string, error) {
