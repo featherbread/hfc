@@ -1,4 +1,4 @@
-module github.com/ahamlinman/hfc
+module github.com/featherbread/hfc
 
 go 1.24.0
 

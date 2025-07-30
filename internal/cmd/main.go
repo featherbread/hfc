@@ -11,9 +11,9 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
 
-	"github.com/ahamlinman/hfc/internal/config"
-	"github.com/ahamlinman/hfc/internal/shelley"
-	"github.com/ahamlinman/hfc/internal/state"
+	"github.com/featherbread/hfc/internal/config"
+	"github.com/featherbread/hfc/internal/shelley"
+	"github.com/featherbread/hfc/internal/state"
 )
 
 func Execute() {
