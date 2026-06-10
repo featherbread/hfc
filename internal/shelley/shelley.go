@@ -30,12 +30,9 @@ func ExitIfError(err error) {
 	if err == nil {
 		return
 	}
-
-	var exitErr ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[ExitError](err); ok {
 		os.Exit(exitErr.ExitCode())
 	}
-
 	log.Fatal(err)
 }
 
