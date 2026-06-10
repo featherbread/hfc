@@ -12,6 +12,11 @@ type Config struct {
 	Stacks   []StackConfig  `toml:"stacks"`
 }
 
+// StackNames returns the names of all defined stacks.
+func (c *Config) StackNames() []string {
+	return lo.Map(c.Stacks, func(s StackConfig, _ int) string { return s.Name })
+}
+
 // FindStack searches for the stack with the given name. If no stack is defined
 // with the provided name, FindStack returns ok == false.
 func (c *Config) FindStack(name string) (stack StackConfig, ok bool) {

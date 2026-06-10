@@ -10,8 +10,9 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/featherbread/parka"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 var statusCmd = &cobra.Command{
@@ -61,21 +62,15 @@ func runStatus(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	ctx := context.TODO()
 	cfnClient := cloudformation.NewFromConfig(awsConfig)
-	var group errgroup.Group
-	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
-	stackS3Keys := make([]string, len(rootConfig.Stacks))
-	for i, stack := range rootConfig.Stacks {
-		group.Go(func() error {
+	stackS3Keys, _ := parka.CollectLimited(ctx, awsConcurrency, rootConfig.StackNames(),
+		func(ctx context.Context, stackName string) (string, error) {
 			// Errors here are intentionally not hard failures. One misconfigured or
 			// not-yet-deployed stack should not prevent reporting for other stacks.
-			if key, err := getStackS3Key(context.Background(), cfnClient, stack.Name); err == nil {
-				stackS3Keys[i] = key
-			}
-			return nil
+			key, err := getStackS3Key(context.Background(), cfnClient, stackName)
+			return lo.Ternary(err == nil, key, ""), nil
 		})
-	}
-	group.Wait()
 
 	for i, stack := range rootConfig.Stacks {
 		tw.WriteColumn(stack.Name)

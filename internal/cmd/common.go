@@ -8,6 +8,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 )
 
+// awsConcurrency is the default concurrency used when we need multiple AWS API
+// calls to retrieve all the data we need.
+//
+// This is not a scientifically chosen value. There may be a better one.
+const awsConcurrency = 3
+
 // getStackS3Key returns the full S3 key (including prefix) for the Lambda
 // package currently in use by the named stack.
 func getStackS3Key(ctx context.Context, cfnClient *cloudformation.Client, stackName string) (string, error) {

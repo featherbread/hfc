@@ -1,6 +1,6 @@
 module github.com/featherbread/hfc
 
-go 1.26.0
+go 1.26.4
 
 require (
 	dario.cat/mergo v1.0.2
@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.24
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.72.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.103.3
+	github.com/featherbread/parka v0.0.0-20260610025933-f3823c2c9cda
 	github.com/google/go-cmp v0.7.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/samber/lo v1.53.0
@@ -32,6 +33,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.36.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.43.3 // indirect
 	github.com/aws/smithy-go v1.27.2 // indirect
+	github.com/gammazero/deque v1.2.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/text v0.38.0 // indirect

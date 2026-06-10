@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/featherbread/parka"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -42,7 +43,6 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 	cfnClient := cloudformation.NewFromConfig(awsConfig)
 	s3Client := s3.NewFromConfig(awsConfig)
 	group, ctx := errgroup.WithContext(context.Background())
-	group.SetLimit(5) // TODO: This is arbitrary, is there a specific limit that makes sense?
 
 	var bucketS3Keys []string
 	group.Go(func() (err error) {
@@ -50,13 +50,14 @@ func runCleanUploads(cmd *cobra.Command, args []string) {
 		return
 	})
 
-	stackS3Keys := make([]string, len(rootConfig.Stacks))
-	for i, stack := range rootConfig.Stacks {
-		group.Go(func() (err error) {
-			stackS3Keys[i], err = getStackS3Key(ctx, cfnClient, stack.Name)
-			return
-		})
-	}
+	var stackS3Keys []string
+	group.Go(func() (err error) {
+		stackS3Keys, err = parka.CollectLimited(ctx, awsConcurrency, rootConfig.StackNames(),
+			func(ctx context.Context, stackName string) (string, error) {
+				return getStackS3Key(ctx, cfnClient, stackName)
+			})
+		return
+	})
 
 	if err := group.Wait(); err != nil {
 		log.Fatal(err)
