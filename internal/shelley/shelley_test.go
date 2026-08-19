@@ -51,8 +51,7 @@ func TestRunWithoutOptions(t *testing.T) {
 
 func TestExitError(t *testing.T) {
 	err := Command("false").Run()
-	var exitErr ExitError
-	if !errors.As(err, &exitErr) {
+	if _, ok := errors.AsType[ExitError](err); !ok {
 		t.Errorf("error was not an ExitError: %v", err)
 	}
 }
