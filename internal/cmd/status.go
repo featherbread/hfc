@@ -63,7 +63,7 @@ func runStatus(cmd *cobra.Command, args []string) {
 	}
 
 	ctx := context.TODO()
-	cfnClient := cloudformation.NewFromConfig(awsConfig)
+	cfnClient := cloudformation.NewFromConfig(getAWSConfig())
 	stackS3Keys, _ := parka.CollectLimited(ctx, awsConcurrency, rootConfig.StackNames(),
 		func(ctx context.Context, stackName string) (string, error) {
 			// Errors here are intentionally not hard failures. One misconfigured or

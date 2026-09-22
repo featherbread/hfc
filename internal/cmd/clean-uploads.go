@@ -40,8 +40,8 @@ func init() {
 }
 
 func runCleanUploads(cmd *cobra.Command, args []string) {
-	cfnClient := cloudformation.NewFromConfig(awsConfig)
-	s3Client := s3.NewFromConfig(awsConfig)
+	cfnClient := cloudformation.NewFromConfig(getAWSConfig())
+	s3Client := s3.NewFromConfig(getAWSConfig())
 	group, ctx := errgroup.WithContext(context.Background())
 
 	var bucketS3Keys []string

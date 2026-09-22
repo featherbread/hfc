@@ -1,14 +1,11 @@
 package cmd
 
 import (
-	"context"
 	"log"
 	"os"
 	"runtime/debug"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
 
 	"github.com/featherbread/hfc/internal/config"
@@ -31,7 +28,6 @@ var rootCmd = &cobra.Command{
 var (
 	rootConfig config.Config
 	rootState  state.State
-	awsConfig  aws.Config
 )
 
 func initializePreRun(cmd *cobra.Command, args []string) {
@@ -48,14 +44,6 @@ func initializePreRun(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 	rootState, err = state.Get(configPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	awsConfig, err = awsconfig.LoadDefaultConfig(
-		context.Background(),
-		awsconfig.WithRegion(rootConfig.AWS.Region),
-	)
 	if err != nil {
 		log.Fatal(err)
 	}

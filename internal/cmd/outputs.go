@@ -29,7 +29,7 @@ func runOutputs(cmd *cobra.Command, args []string) {
 		log.Fatalf("stack %s is not configured", stackName)
 	}
 
-	cfnClient := cloudformation.NewFromConfig(awsConfig)
+	cfnClient := cloudformation.NewFromConfig(getAWSConfig())
 	description, err := cfnClient.DescribeStacks(context.Background(), &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	})
