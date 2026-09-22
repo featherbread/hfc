@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/samber/lo"
 )
 
 // ExitError is the type of error returned by commands that completed with a
@@ -70,10 +71,11 @@ func (c *Context) Command(args ...string) *Cmd {
 
 // Cmd represents a runnable command.
 type Cmd struct {
-	context *Context
-	cmd     *exec.Cmd
-	args    []string
-	envs    []string
+	context    *Context
+	cmd        *exec.Cmd
+	args       []string
+	envs       []string
+	secretEnvs map[string]struct{}
 }
 
 // Command initializes a new command using DefaultContext.
@@ -81,13 +83,24 @@ func Command(args ...string) *Cmd {
 	return DefaultContext.Command(args...)
 }
 
-// Env appends an environment value to the command.
+// PublicEnv appends a loggable environment value to the command.
 //
 // The appended value overrides any value inherited from the current process or
-// set by a previous Env call.
-func (c *Cmd) Env(name, value string) *Cmd {
+// set by a previous PublicEnv call.
+func (c *Cmd) PublicEnv(name, value string) *Cmd {
 	c.envs = append(c.envs, name+"="+value)
 	return c
+}
+
+// SecretEnv appends a non-loggable environment value to the command.
+//
+// Other than logging, SecretEnv follows the semantics of [Cmd.PublicEnv].
+func (c *Cmd) SecretEnv(name, value string) *Cmd {
+	if c.secretEnvs == nil {
+		c.secretEnvs = make(map[string]struct{})
+	}
+	c.secretEnvs[name] = struct{}{}
+	return c.PublicEnv(name, value)
 }
 
 // Run runs the command and waits for it to complete.
@@ -96,10 +109,12 @@ func (c *Cmd) Run() error {
 		var envString strings.Builder
 		for _, env := range c.envs {
 			split := strings.SplitN(env, "=", 2)
-			envString.WriteString(split[0])
-			envString.WriteRune('=')
-			envString.WriteString(shellquote.Join(split[1]))
-			envString.WriteRune(' ')
+			if !lo.HasKey(c.secretEnvs, split[0]) {
+				envString.WriteString(split[0])
+				envString.WriteRune('=')
+				envString.WriteString(shellquote.Join(split[1]))
+				envString.WriteRune(' ')
+			}
 		}
 		c.context.DebugLogger.Print(envString.String() + shellquote.Join(c.args...))
 	}

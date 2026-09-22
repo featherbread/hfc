@@ -64,7 +64,7 @@ func TestDebug(t *testing.T) {
 		DebugLogger: log.New(&debug, "", 0),
 	}
 
-	err := context.Command("sort").Env("LC_ALL", "C").Run()
+	err := context.Command("sort").PublicEnv("LC_ALL", "C").Run()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,16 +81,29 @@ func TestDebug(t *testing.T) {
 }
 
 func TestEnv(t *testing.T) {
-	var stdout strings.Builder
-	context := &Context{Stdout: &stdout}
+	var stdout, debug strings.Builder
+	context := &Context{
+		Stdout:      &stdout,
+		DebugLogger: log.New(&debug, "", 0),
+	}
 
-	err := context.Command("sh", "-c", `echo "$SHELLEY"`).Env("SHELLEY", "shelley").Run()
+	err := context.
+		Command("sh", "-c", `echo "$SHELLEY_PUBLIC"`).
+		PublicEnv("SHELLEY_PUBLIC", "public").
+		SecretEnv("SHELLEY_PRIVATE", "private").
+		PublicEnv("SHELLEY_ALSOPUBLIC", "alsopublic").
+		Run()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	const wantStdout = "shelley\n"
+	const wantStdout = "public\n"
 	if stdout.String() != wantStdout {
 		t.Errorf("unexpected output; got %q, want %q", stdout.String(), wantStdout)
+	}
+
+	const wantDebug = `SHELLEY_PUBLIC=public SHELLEY_ALSOPUBLIC=alsopublic sh -c 'echo "$SHELLEY_PUBLIC"'` + "\n"
+	if debug.String() != wantDebug {
+		t.Errorf("unexpected debug; got %q, want %q", debug.String(), wantDebug)
 	}
 }

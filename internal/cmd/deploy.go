@@ -65,8 +65,17 @@ func runDeploy(cmd *cobra.Command, args []string) {
 		{"--parameter-overrides"},
 		allParameters,
 	})
-	shelley.ExitIfError(shelley.Command(deployArgs...).Run())
 
+	awsCmd := shelley.Command(deployArgs...)
+	if helperCreds, ok := getHelperAWSCredentials(); ok {
+		awsCmd.SecretEnv("AWS_ACCESS_KEY_ID", helperCreds.AccessKeyID)
+		awsCmd.SecretEnv("AWS_SECRET_ACCESS_KEY", helperCreds.SecretAccessKey)
+		if helperCreds.SessionToken != "" {
+			awsCmd.SecretEnv("AWS_SESSION_TOKEN", helperCreds.SessionToken)
+		}
+	}
+
+	shelley.ExitIfError(awsCmd.Run())
 	runOutputs(cmd, args)
 }
 

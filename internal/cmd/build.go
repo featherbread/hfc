@@ -52,6 +52,8 @@ func runBuild(cmd *cobra.Command, args []string) {
 			"-o", outputPath,
 			rootConfig.Build.Path,
 		).
-		Env("CGO_ENABLED", "0").Env("GOOS", "linux").Env("GOARCH", "arm64").
+		PublicEnv("CGO_ENABLED", "0").
+		PublicEnv("GOOS", "linux").
+		PublicEnv("GOARCH", "arm64").
 		Run())
 }
